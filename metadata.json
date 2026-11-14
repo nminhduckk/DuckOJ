@@ -1,0 +1,6 @@
+{
+  "name": "DuckOJ",
+  "description": "Nền tảng học lập trình thi đấu và máy chấm tự động theo lộ trình 7 cấp (Cấp 0–6).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

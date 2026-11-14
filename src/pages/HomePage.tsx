@@ -1,0 +1,246 @@
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, BookOpen, Code2, Cpu, GitBranch, Trophy } from 'lucide-react';
+import { apiFetch } from '../lib/api';
+import { useApp } from '../context/AppContext';
+import type { TrackItem } from '../types/duckoj';
+
+export function HomePage() {
+  const { locale, t, navigate } = useApp();
+  const [tracks, setTracks] = useState<TrackItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    apiFetch<{ items: TrackItem[] }>('/tracks')
+      .then((res) => {
+        if (active) setTracks(res.items);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const totalLessons = tracks.reduce((s, r) => s + Number(r.lessons_count || 0), 0) || 74;
+  const totalProblems = tracks.reduce((s, r) => s + Number(r.problems_count || 0), 0);
+  const totalNative = tracks.reduce((s, r) => s + Number(r.native_count || 0), 0) || 43;
+
+  return (
+    <div>
+      {/* Hero section */}
+      <section className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 lg:py-20 grid lg:grid-cols-12 gap-10 items-stretch">
+          <div className="lg:col-span-7 flex flex-col justify-between gap-6">
+            <div className="space-y-4">
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400 tracking-wide">
+                {locale === 'vi'
+                  ? 'Học thuật toán bài bản · Chấm bài tự động C++17 & Python 3'
+                  : 'Structured Algorithms Curriculum · Automated C++17 & Python 3 Judge'}
+              </p>
+              <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.12] font-display text-balance max-w-2xl">
+                {locale === 'vi'
+                  ? 'Làm chủ lập trình thi đấu từ Cấp 0 đến Chuyên gia'
+                  : 'Master Competitive Programming from Level 0 to Grandmaster'}
+              </h1>
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                {locale === 'vi'
+                  ? 'DuckOJ kết hợp 74 bài học có đồ thị tiên quyết rõ ràng, hàng trăm bài tập phân tầng từ Codeforces, CSES, AtCoder cùng 43 bài tập chấm trực tiếp trên máy chấm sandbox.'
+                  : 'DuckOJ pairs 74 structured lessons in an acyclic skill tree with curated Codeforces, CSES, and AtCoder problems plus 43 native automated judge tasks.'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <a
+                href="/learn/cpp-syntax-io"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/learn/cpp-syntax-io');
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 text-sm font-semibold hover:bg-slate-800 dark:hover:bg-amber-400 transition-colors whitespace-nowrap shrink-0"
+              >
+                <span>{t.startFromZero}</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+              <a
+                href="/roadmap"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/roadmap');
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors whitespace-nowrap shrink-0"
+              >
+                <GitBranch className="w-4 h-4" />
+                <span>{locale === 'vi' ? 'Xem lộ trình 74 bài' : 'Explore 74-Lesson Roadmap'}</span>
+              </a>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 p-6 flex flex-col justify-between gap-6">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                {locale === 'vi' ? 'Kiến trúc học tập DuckOJ' : 'DuckOJ Learning Architecture'}
+              </h2>
+              <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+                <div className="flex items-start gap-3">
+                  <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-1 shrink-0" />
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                      {locale === 'vi' ? 'Lý thuyết 8 phần & Quiz kiểm tra' : '8-Section Theory & Graded Quiz'}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {locale === 'vi'
+                        ? 'Mục tiêu, lý thuyết KaTeX, code mẫu C++17, bẫy thường gặp và quiz trắc nghiệm.'
+                        : 'Objectives, KaTeX theory, runnable C++17 samples, pitfalls, and quiz checks.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Cpu className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-1 shrink-0" />
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                      {locale === 'vi' ? 'Máy chấm Sandbox & Streaming SSE' : 'Sandbox Judge & Real-Time SSE'}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {locale === 'vi'
+                        ? 'Chấm từng test theo thời gian thực với bộ kiểm tra tokens, lines, sai số thực và custom checker.'
+                        : 'Live test-by-test verdicts with tokens, lines, float tolerance, and custom checkers.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Trophy className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-1 shrink-0" />
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                      {locale === 'vi' ? 'Kỳ thi chuẩn ICPC & Gợi ý 4 tầng' : 'ICPC Contests & 4-Tier Progressive Hints'}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {locale === 'vi'
+                        ? 'Bảng xếp hạng tính điểm phạt thời gian thực và gợi ý mở khóa theo số lần thử.'
+                        : 'Live ICPC penalty standings and anti-spoil progressive hint unlocking.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span>{locale === 'vi' ? 'Thử bài chấm trực tiếp ngay:' : 'Try live judge now:'}</span>
+              <a
+                href="/problems/nat-sum-diff"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/problems/nat-sum-diff');
+                }}
+                className="font-mono font-semibold text-amber-700 dark:text-amber-400 hover:underline"
+              >
+                nat-sum-diff →
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Full-width 4-column summary metrics strip */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 border-t border-slate-200 dark:border-slate-800 pt-8">
+            <div>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">7</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {locale === 'vi' ? 'Cấp độ từ Nhập môn tới Chuyên gia' : 'Progressive Curriculum Tracks'}
+              </p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">{totalLessons}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {locale === 'vi' ? 'Bài học' : 'Lessons'}
+              </p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">{totalNative}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {locale === 'vi' ? 'Bài tập Native chấm tại DuckOJ' : 'Native Automated Judge Problems'}
+              </p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">
+                {totalProblems || 310}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {locale === 'vi' ? 'Tổng bài tập thực hành đã kiểm duyệt' : 'Published Practice Problems'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7 Tracks overview */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-display">
+              {locale === 'vi' ? '7 chặng lộ trình học tập' : '7 Curriculum Tracks'}
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              {locale === 'vi'
+                ? 'Đi tuần tự từ cú pháp C++17 đến các cấu trúc dữ liệu và thuật toán thi đấu chuyên sâu.'
+                : 'Progress systematically from C++17 fundamentals to advanced competitive algorithms.'}
+            </p>
+          </div>
+          <a
+            href="/problems?kind=native"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/problems?kind=native');
+            }}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-400 hover:underline whitespace-nowrap shrink-0"
+          >
+            <Code2 className="w-4 h-4" />
+            <span>{locale === 'vi' ? 'Xem 43 bài chấm trực tiếp' : 'Browse 43 Native Judge Problems'}</span>
+          </a>
+        </div>
+
+        {loading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div
+                key={i}
+                className="h-36 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tracks.map((tr) => (
+              <button
+                key={tr.id}
+                type="button"
+                onClick={() => navigate(`/learn?level=${tr.id}`)}
+                className="text-left rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 hover:border-amber-500 dark:hover:border-amber-500 transition-colors flex flex-col justify-between gap-4"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 mb-1.5 tabular-nums">
+                    <span className="font-semibold text-amber-700 dark:text-amber-400">
+                      {locale === 'vi' ? `Cấp ${tr.id}` : `Level ${tr.id}`}
+                    </span>
+                    <span>{tr.cf_rating_range}</span>
+                  </div>
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">{tr.name}</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1.5 line-clamp-2">{tr.description}</p>
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-3 border-t border-slate-100 dark:border-slate-800 tabular-nums">
+                  <span>
+                    {tr.lessons_count} {locale === 'vi' ? 'bài học' : 'lessons'} · {tr.problems_count}{' '}
+                    {locale === 'vi' ? 'bài tập' : 'problems'}
+                  </span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{tr.estimated_duration}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
