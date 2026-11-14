@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Cpu, ExternalLink, RotateCcw, Search } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { formatTier, formatTopic } from '../lib/i18n';
 import { useApp } from '../context/AppContext';
 import { ProblemStatusLabel } from '../components/VerdictBadge';
 import type { ProblemSummary, TopicItem } from '../types/duckoj';
@@ -198,7 +199,15 @@ export function ProblemsPage() {
             <option value="">{locale === 'vi' ? 'Mọi nguồn' : 'All sources'}</option>
             {['Native', 'CSES', 'Codeforces', 'AtCoder', 'LibraryChecker', 'Other'].map((s) => (
               <option key={s} value={s}>
-                {s}
+                {s === 'Native'
+                  ? locale === 'vi'
+                    ? 'DuckOJ (Chấm trực tiếp)'
+                    : 'DuckOJ Judge'
+                  : s === 'Other'
+                    ? locale === 'vi'
+                      ? 'Nguồn khác'
+                      : 'Other'
+                    : s}
               </option>
             ))}
           </select>
@@ -210,9 +219,11 @@ export function ProblemsPage() {
             className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100"
           >
             <option value="">{locale === 'vi' ? 'Mọi độ khó' : 'All tiers'}</option>
-            <option value="Khởi động">Khởi động</option>
-            <option value="Luyện tập">Luyện tập</option>
-            <option value="Thử thách">Thử thách</option>
+            {(['Khởi động', 'Luyện tập', 'Thử thách'] as const).map((tierVal) => (
+              <option key={tierVal} value={tierVal}>
+                {formatTier(tierVal, locale)}
+              </option>
+            ))}
           </select>
 
           <select
@@ -224,7 +235,7 @@ export function ProblemsPage() {
             <option value="">{locale === 'vi' ? 'Mọi chuyên đề' : 'All topics'}</option>
             {topics.map((tp) => (
               <option key={tp.slug} value={tp.slug}>
-                {tp.name_vi} ({tp.problem_count ?? 0})
+                {formatTopic(tp.slug, tp.name_vi, locale)} ({tp.problem_count ?? 0})
               </option>
             ))}
           </select>
@@ -282,7 +293,7 @@ export function ProblemsPage() {
                 <tr>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Bài tập' : 'Problem'}</th>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Nguồn' : 'Source'}</th>
-                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Cấp / Mức' : 'Level / Tier'}</th>
+                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Cấp / Độ khó' : 'Level / Tier'}</th>
                   <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Trạng thái' : 'Status'}</th>
                 </tr>
               </thead>
@@ -301,7 +312,7 @@ export function ProblemsPage() {
                         {p.title}
                       </a>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {p.topics.slice(0, 4).map((tp) => tp.name_vi).join(' · ')}
+                        {p.topics.slice(0, 4).map((tp) => formatTopic(tp.slug, tp.name_vi, locale)).join(' · ')}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-xs whitespace-nowrap">
@@ -320,7 +331,7 @@ export function ProblemsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                      Cấp {p.level} · {p.difficulty}
+                      {locale === 'vi' ? `Cấp ${p.level}` : `Level ${p.level}`} · {formatTier(p.difficulty, locale)}
                       {p.cf_rating ? ` · ${p.cf_rating}` : ''}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">

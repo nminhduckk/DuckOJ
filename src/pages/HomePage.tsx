@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowRight, BookOpen, Code2, Cpu, GitBranch, Trophy } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { formatTrack, formatTrackDescription, formatTrackDuration, formatTrackRange } from '../lib/i18n';
 import { useApp } from '../context/AppContext';
 import type { TrackItem } from '../types/duckoj';
 
@@ -47,8 +48,8 @@ export function HomePage() {
               </h1>
               <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
                 {locale === 'vi'
-                  ? 'DuckOJ kết hợp 74 bài học có đồ thị tiên quyết rõ ràng, hàng trăm bài tập phân tầng từ Codeforces, CSES, AtCoder cùng 43 bài tập chấm trực tiếp trên máy chấm sandbox.'
-                  : 'DuckOJ pairs 74 structured lessons in an acyclic skill tree with curated Codeforces, CSES, and AtCoder problems plus 43 native automated judge tasks.'}
+                  ? `DuckOJ kết hợp ${totalLessons} bài học có đồ thị tiên quyết rõ ràng, hàng trăm bài tập phân tầng từ Codeforces, CSES, AtCoder cùng ${totalNative} bài tập chấm trực tiếp tự động.`
+                  : `DuckOJ pairs ${totalLessons} structured lessons in an acyclic skill tree with curated Codeforces, CSES, and AtCoder problems plus ${totalNative} native automated judge tasks.`}
               </p>
             </div>
 
@@ -88,11 +89,11 @@ export function HomePage() {
                   <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-slate-900 dark:text-slate-100">
-                      {locale === 'vi' ? 'Lý thuyết 8 phần & Quiz kiểm tra' : '8-Section Theory & Graded Quiz'}
+                      {locale === 'vi' ? 'Giáo trình 8 phần & Trắc nghiệm' : '8-Section Theory & Graded Quiz'}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {locale === 'vi'
-                        ? 'Mục tiêu, lý thuyết KaTeX, code mẫu C++17, bẫy thường gặp và quiz trắc nghiệm.'
+                        ? 'Mục tiêu, lý thuyết KaTeX, code mẫu C++17, bẫy thường gặp và trắc nghiệm củng cố.'
                         : 'Objectives, KaTeX theory, runnable C++17 samples, pitfalls, and quiz checks.'}
                     </p>
                   </div>
@@ -101,11 +102,11 @@ export function HomePage() {
                   <Cpu className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-slate-900 dark:text-slate-100">
-                      {locale === 'vi' ? 'Máy chấm Sandbox & Streaming SSE' : 'Sandbox Judge & Real-Time SSE'}
+                      {locale === 'vi' ? 'Chấm bài tự động theo thời gian thực' : 'Sandbox Judge & Real-Time Streaming'}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {locale === 'vi'
-                        ? 'Chấm từng test theo thời gian thực với bộ kiểm tra tokens, lines, sai số thực và custom checker.'
+                        ? 'Chấm từng test tức thì với so khớp token, từng dòng, sai số thực và trình chấm đa nghiệm.'
                         : 'Live test-by-test verdicts with tokens, lines, float tolerance, and custom checkers.'}
                     </p>
                   </div>
@@ -148,7 +149,7 @@ export function HomePage() {
             <div>
               <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">7</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {locale === 'vi' ? 'Cấp độ từ Nhập môn tới Chuyên gia' : 'Progressive Curriculum Tracks'}
+                {locale === 'vi' ? 'Chặng lộ trình từ Cấp 0 đến Cấp 6' : 'Progressive Curriculum Tracks'}
               </p>
             </div>
             <div>
@@ -160,7 +161,7 @@ export function HomePage() {
             <div>
               <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">{totalNative}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {locale === 'vi' ? 'Bài tập Native chấm tại DuckOJ' : 'Native Automated Judge Problems'}
+                {locale === 'vi' ? 'Bài tập chấm trực tiếp tại DuckOJ' : 'Native Automated Judge Problems'}
               </p>
             </div>
             <div>
@@ -197,7 +198,11 @@ export function HomePage() {
             className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-400 hover:underline whitespace-nowrap shrink-0"
           >
             <Code2 className="w-4 h-4" />
-            <span>{locale === 'vi' ? 'Xem 43 bài chấm trực tiếp' : 'Browse 43 Native Judge Problems'}</span>
+            <span>
+              {locale === 'vi'
+                ? `Xem ${totalNative} bài chấm trực tiếp`
+                : `Browse ${totalNative} Native Judge Problems`}
+            </span>
           </a>
         </div>
 
@@ -224,17 +229,23 @@ export function HomePage() {
                     <span className="font-semibold text-amber-700 dark:text-amber-400">
                       {locale === 'vi' ? `Cấp ${tr.id}` : `Level ${tr.id}`}
                     </span>
-                    <span>{tr.cf_rating_range}</span>
+                    <span>{formatTrackRange(tr.id, tr.cf_rating_range, locale)}</span>
                   </div>
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">{tr.name}</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1.5 line-clamp-2">{tr.description}</p>
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                    {formatTrack(tr.id, tr.name, locale)}
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1.5 line-clamp-2">
+                    {formatTrackDescription(tr.id, tr.description, locale)}
+                  </p>
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-3 border-t border-slate-100 dark:border-slate-800 tabular-nums">
                   <span>
                     {tr.lessons_count} {locale === 'vi' ? 'bài học' : 'lessons'} · {tr.problems_count}{' '}
                     {locale === 'vi' ? 'bài tập' : 'problems'}
                   </span>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">{tr.estimated_duration}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    {formatTrackDuration(tr.estimated_duration, locale)}
+                  </span>
                 </div>
               </button>
             ))}

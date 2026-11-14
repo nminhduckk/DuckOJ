@@ -193,6 +193,71 @@ int main() {
     assert.equal(runChecker({ type: 'tokens' }, '50000 50000', runGood1ll.stdout, '2500000000').verdict, 'AC');
   });
 
+  it('supports std::gcd, custom recursive gcd, and int32_t overflow semantics', async () => {
+    const stdGcdProg = prepareProgram(
+      'cpp17',
+      `#include <bits/stdc++.h>
+using namespace std;
+int main() {
+    long long a, b;
+    cin >> a >> b;
+    long long g = std::gcd(a, b);
+    cout << g << " " << (a / g) * b << "\\n";
+    return 0;
+}`
+    );
+    assert.equal(stdGcdProg.ok, true);
+    const runStdGcd = await runInSandbox(stdGcdProg, '1000000000 999999999', {
+      time_ms: 1000,
+      memory_mb: 256,
+      output_kb: 65536,
+    });
+    assert.equal(runStdGcd.meta.exitcode, 0, runStdGcd.stderr);
+    assert.equal(runChecker({ type: 'tokens' }, '1000000000 999999999', runStdGcd.stdout, '1 999999999000000000').verdict, 'AC');
+
+    const customGcdProg = prepareProgram(
+      'cpp17',
+      `#include <bits/stdc++.h>
+using namespace std;
+long long gcd(long long a, long long b) {
+    return b == 0 ? a : gcd(b, a % b);
+}
+int main() {
+    long long a, b;
+    cin >> a >> b;
+    cout << gcd(a, b) << "\\n";
+    return 0;
+}`
+    );
+    assert.equal(customGcdProg.ok, true);
+    const runCustomGcd = await runInSandbox(customGcdProg, '36 48', {
+      time_ms: 1000,
+      memory_mb: 256,
+      output_kb: 65536,
+    });
+    assert.equal(runCustomGcd.meta.exitcode, 0, runCustomGcd.stderr);
+    assert.equal(runChecker({ type: 'tokens' }, '36 48', runCustomGcd.stdout, '12').verdict, 'AC');
+
+    const int32Overflow = prepareProgram(
+      'cpp17',
+      `#include <bits/stdc++.h>
+using namespace std;
+int32_t a, b;
+int main() {
+    cin >> a >> b;
+    cout << a + b << "\\n";
+    return 0;
+}`
+    );
+    assert.equal(int32Overflow.ok, true);
+    const runInt32 = await runInSandbox(int32Overflow, '2000000000 2000000000', {
+      time_ms: 1000,
+      memory_mb: 256,
+      output_kb: 65536,
+    });
+    assert.equal(runChecker({ type: 'tokens' }, '2000000000 2000000000', runInt32.stdout, '4000000000').verdict, 'WA');
+  });
+
   it('passes all 17 judge selftest cases (§7.9)', async () => {
     const report = await runJudgeSelftest();
     const failures = report.results.filter((r) => !r.passed);

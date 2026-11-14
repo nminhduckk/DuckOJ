@@ -131,7 +131,7 @@ int main() { cout << 0 << "\\n"; return 0; }`,
   results.push(
     await runCase(
       'tle_loop',
-      'tle_loop.cpp — Vòng lặp vô hạn',
+      'tle_loop.py — Vòng lặp vô hạn',
       'python3',
       `while True:\n    pass\n`,
       '',
@@ -146,7 +146,7 @@ int main() { cout << 0 << "\\n"; return 0; }`,
   results.push(
     await runCase(
       'tle_sleep',
-      'tle_sleep.cpp — Ngủ 5s (bị chặn wall time)',
+      'tle_sleep.py — Ngủ 5 giây (bị chặn thời gian thực)',
       'python3',
       `import time\ntime.sleep(5)\n`,
       '',
@@ -161,7 +161,7 @@ int main() { cout << 0 << "\\n"; return 0; }`,
   results.push(
     await runCase(
       'mle_alloc',
-      'mle_alloc.cpp — Cấp phát 512 MB và ghi vào',
+      'mle_alloc.py — Cấp phát 512 MB và ghi dữ liệu',
       'python3',
       `a = bytearray(512 * 1024 * 1024)\na[0] = 1\nprint(len(a))\n`,
       '',
@@ -229,7 +229,7 @@ int main() { return 1; }`,
   results.push(
     await runCase(
       're_stack',
-      're_stack.cpp — Đệ quy sâu 10^7',
+      're_stack.py — Đệ quy sâu 10^7',
       'python3',
       `import sys\nsys.setrecursionlimit(1000)\ndef f(n):\n    return 0 if n == 0 else f(n - 1) + 1\nprint(f(10000000))\n`,
       '',
@@ -242,7 +242,7 @@ int main() { return 1; }`,
   results.push(
     await runCase(
       'ole_print',
-      'ole_print.cpp — In vô hạn vượt Output Limit',
+      'ole_print.py — In vô hạn vượt giới hạn đầu ra',
       'python3',
       `chunk = "A" * 65536\nwhile True:\n    print(chunk)\n`,
       '',
@@ -274,7 +274,7 @@ int main() {
   results.push(
     await runCase(
       'sec_fork',
-      'sec_fork.cpp — Gọi fork trong sandbox',
+      'sec_fork.py — Gọi fork() trong hộp cát',
       'python3',
       `import os\nos.fork()\n`,
       '',
@@ -287,7 +287,7 @@ int main() {
   results.push(
     await runCase(
       'sec_read',
-      'sec_read.cpp — Đọc /etc/passwd bị chặn',
+      'sec_read.py — Đọc /etc/passwd bị chặn',
       'python3',
       `try:\n    open('/etc/passwd', 'r').read()\n    print('allowed')\nexcept PermissionError:\n    print('blocked')\n`,
       '',
@@ -300,7 +300,7 @@ int main() {
   results.push(
     await runCase(
       'sec_net',
-      'sec_net.cpp — Kết nối socket 1.1.1.1:80 bị chặn',
+      'sec_net.py — Kết nối mạng 1.1.1.1:80 bị chặn',
       'python3',
       `import socket\ntry:\n    s = socket.socket()\n    s.connect(('1.1.1.1', 80))\n    print('allowed')\nexcept Exception:\n    print('blocked')\n`,
       '',
@@ -313,7 +313,7 @@ int main() {
   results.push(
     await runCase(
       'sec_write',
-      'sec_write.cpp — Ghi file ngoài thư mục box bị chặn',
+      'sec_write.py — Ghi tệp ngoài hộp cát bị chặn',
       'python3',
       `try:\n    open('/tmp/duckoj_escape.txt', 'w').write('x')\n    print('allowed')\nexcept PermissionError:\n    print('blocked')\n`,
       '',
@@ -332,7 +332,7 @@ print(42)
 `;
   const r16 = await runCase(
     'time_050',
-    'time_050.cpp — Vòng lặp CPU ~0.5s (trong [350, 750] ms)',
+    'time_050.py — Vòng lặp CPU ~0,5 giây (trong khoảng 350–750 ms)',
     'python3',
     busyCode,
     '',
@@ -355,13 +355,13 @@ print(42)
   const stdDevPct = mean > 0 ? (Math.sqrt(variance) / mean) * 100 : 0;
   results.push({
     id: 'stability',
-    name: 'run_selftest — Độ ổn định 5 lần chạy (< 10% std dev)',
+    name: 'stability — Độ ổn định 5 lần chạy (hệ số biến thiên < 10%)',
     expected: 'CV < 10%',
     actual: `CV = ${stdDevPct.toFixed(2)}%`,
     passed: stdDevPct < 10,
     time_ms: Math.round(mean),
     memory_kb: r16.memory_kb,
-    detail: `Times (ms): [${times.join(', ')}]`,
+    detail: `Thời gian (ms): [${times.join(', ')}]`,
   });
 
   const passedCount = results.filter((r) => r.passed).length;

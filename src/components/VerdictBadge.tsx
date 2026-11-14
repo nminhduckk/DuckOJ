@@ -36,47 +36,48 @@ export function VerdictBadge({
   }
 
   const v = verdict || 'SE';
+  const vi = locale === 'vi';
   const cfg: Record<
     Verdict,
     { label: string; color: string; Icon: React.ComponentType<{ className?: string }> }
   > = {
     AC: {
-      label: compact ? 'AC' : 'AC · Chính xác',
+      label: compact ? 'AC' : vi ? 'AC · Chính xác' : 'AC · Accepted',
       color: 'text-emerald-700 dark:text-emerald-400',
       Icon: CheckCircle2,
     },
     WA: {
-      label: compact ? 'WA' : 'WA · Sai kết quả',
+      label: compact ? 'WA' : vi ? 'WA · Sai kết quả' : 'WA · Wrong Answer',
       color: 'text-rose-700 dark:text-rose-400',
       Icon: XCircle,
     },
     TLE: {
-      label: compact ? 'TLE' : 'TLE · Quá thời gian',
+      label: compact ? 'TLE' : vi ? 'TLE · Quá thời gian' : 'TLE · Time Limit',
       color: 'text-amber-700 dark:text-amber-400',
       Icon: Clock,
     },
     MLE: {
-      label: compact ? 'MLE' : 'MLE · Quá bộ nhớ',
+      label: compact ? 'MLE' : vi ? 'MLE · Quá bộ nhớ' : 'MLE · Memory Limit',
       color: 'text-amber-700 dark:text-amber-400',
       Icon: Cpu,
     },
     RE: {
-      label: compact ? 'RE' : 'RE · Lỗi thực thi',
+      label: compact ? 'RE' : vi ? 'RE · Lỗi thực thi' : 'RE · Runtime Error',
       color: 'text-orange-700 dark:text-orange-400',
       Icon: AlertTriangle,
     },
     CE: {
-      label: compact ? 'CE' : 'CE · Lỗi biên dịch',
+      label: compact ? 'CE' : vi ? 'CE · Lỗi biên dịch' : 'CE · Compile Error',
       color: 'text-slate-700 dark:text-slate-300',
       Icon: Terminal,
     },
     OLE: {
-      label: compact ? 'OLE' : 'OLE · Quá đầu ra',
+      label: compact ? 'OLE' : vi ? 'OLE · Quá đầu ra' : 'OLE · Output Limit',
       color: 'text-amber-700 dark:text-amber-400',
       Icon: FileWarning,
     },
     SE: {
-      label: compact ? 'SE' : 'SE · Lỗi hệ thống',
+      label: compact ? 'SE' : vi ? 'SE · Lỗi hệ thống' : 'SE · System Error',
       color: 'text-rose-700 dark:text-rose-400',
       Icon: AlertTriangle,
     },

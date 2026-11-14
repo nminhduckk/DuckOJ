@@ -82,7 +82,7 @@ function checkFloat(actual: string, expected: string, eps = 1e-6): CheckerResult
       if (Math.abs(av - ev) > tol) {
         return {
           verdict: 'WA',
-          message: `Sai số vượt ngưỡng eps=${eps} tại token ${i + 1}: nhận ${a}, kỳ vọng ${e}.`.slice(0, 500),
+          message: `Sai số vượt ngưỡng ${eps} tại token thứ ${i + 1}: nhận ${a}, kỳ vọng ${e}.`.slice(0, 500),
         };
       }
     } else if (a !== e) {
@@ -93,13 +93,13 @@ function checkFloat(actual: string, expected: string, eps = 1e-6): CheckerResult
     }
   }
 
-  return { verdict: 'AC', message: `Đạt sai số cho phép (eps=${eps}).` };
+  return { verdict: 'AC', message: `Đạt sai số cho phép (ngưỡng ${eps}).` };
 }
 
 function checkEqualRowSums(input: string, actual: string): CheckerResult {
   const n = Number.parseInt(input.trim().split(/\s+/)[0] || '', 10);
   if (!Number.isInteger(n) || n < 1) {
-    return { verdict: 'SE', message: 'Input custom checker không hợp lệ.' };
+    return { verdict: 'SE', message: 'Dữ liệu đầu vào của trình chấm không hợp lệ.' };
   }
   const tokens = actual.trim() ? actual.trim().split(/\s+/) : [];
   if (tokens.length !== n * n) {
@@ -156,15 +156,15 @@ export function runChecker(
       case 'custom': {
         const cid = config.params?.custom_id || 'equal_row_sums';
         if (cid === 'equal_row_sums') return checkEqualRowSums(input, actual);
-        return { verdict: 'SE', message: `Custom checker "${cid}" chưa được đăng ký.` };
+        return { verdict: 'SE', message: `Trình chấm tùy biến "${cid}" chưa được hỗ trợ.` };
       }
       default:
-        return { verdict: 'SE', message: `Loại checker không xác định.` };
+        return { verdict: 'SE', message: 'Loại trình chấm không xác định.' };
     }
   } catch (err) {
     return {
       verdict: 'SE',
-      message: `Lỗi checker: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500),
+      message: `Lỗi trình chấm: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500),
     };
   }
 }

@@ -2142,7 +2142,7 @@ export function generateNativeProblems(): NativeProblemDef[] {
       samples,
       hints: hints4(
         'Dùng `priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<>>`.',
-        'Khởi tạo `dist[1] = 0`, các đỉnh khác bằng `INF` (vd `4e18`).',
+        'Khởi tạo `dist[1] = 0`, các đỉnh khác bằng `INF` (ví dụ `4e18`).',
         'Nếu `dist[i] == INF`, in `-1`.',
         `#include <bits/stdc++.h>\nusing namespace std;\nint main(){\n    ios::sync_with_stdio(false); cin.tie(nullptr);\n    int n,m; cin>>n>>m; vector<vector<pair<int,int>>> adj(n+1);\n    while(m--){int u,v,w;cin>>u>>v>>w;adj[u].push_back({v,w});}\n    const long long INF=4e18; vector<long long> d(n+1,INF); d[1]=0;\n    priority_queue<pair<long long,int>,vector<pair<long long,int>>,greater<>> pq; pq.push({0,1});\n    while(!pq.empty()){ auto [du,u]=pq.top(); pq.pop(); if(du>d[u]) continue; for(auto [v,w]:adj[u]) if(d[u]+w<d[v]){d[v]=d[u]+w;pq.push({d[v],v});} }\n    for(int i=1;i<=n;i++) cout<<(d[i]==INF?-1:d[i])<<(i==n?"\\n":" ");\n    return 0;\n}`
       ),

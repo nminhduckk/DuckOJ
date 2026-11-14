@@ -52,19 +52,19 @@ export function classifyVerdict(
   const memory_kb = Math.max(meta.maxRss, meta.cgMem);
 
   if (meta.status === 'XX') {
-    return { verdict: 'SE', time_ms, memory_kb, reason: meta.message || 'Internal sandbox error (XX)' };
+    return { verdict: 'SE', time_ms, memory_kb, reason: meta.message || 'Lỗi nội bộ máy chấm (XX)' };
   }
 
   if (meta.cgOomKilled || memory_kb >= memoryLimitMb * 1024) {
-    return { verdict: 'MLE', time_ms, memory_kb, reason: 'Exceeded memory limit' };
+    return { verdict: 'MLE', time_ms, memory_kb, reason: 'Vượt quá giới hạn bộ nhớ' };
   }
 
   if (meta.exitsig === 25 || stdoutTruncated) {
-    return { verdict: 'OLE', time_ms, memory_kb, reason: 'Output limit exceeded (SIGXFSZ)' };
+    return { verdict: 'OLE', time_ms, memory_kb, reason: 'Vượt quá giới hạn đầu ra (SIGXFSZ)' };
   }
 
   if (meta.status === 'TO' || time_ms > timeLimitMs) {
-    return { verdict: 'TLE', time_ms, memory_kb, reason: 'Time limit exceeded' };
+    return { verdict: 'TLE', time_ms, memory_kb, reason: 'Vượt quá giới hạn thời gian' };
   }
 
   if (meta.status === 'SG' || meta.status === 'RE' || meta.exitcode !== 0 || meta.exitsig !== 0) {
@@ -72,9 +72,11 @@ export function classifyVerdict(
       verdict: 'RE',
       time_ms,
       memory_kb,
-      reason: meta.message || (meta.exitsig ? `Terminated by signal ${meta.exitsig}` : `Non-zero exit code ${meta.exitcode}`),
+      reason:
+        meta.message ||
+        (meta.exitsig ? `Bị ngắt bởi tín hiệu ${meta.exitsig}` : `Mã thoát khác 0 (${meta.exitcode})`),
     };
   }
 
-  return { verdict: 'OK', time_ms, memory_kb, reason: 'Execution OK' };
+  return { verdict: 'OK', time_ms, memory_kb, reason: 'Chạy hoàn tất' };
 }

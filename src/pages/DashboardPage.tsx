@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, BookCheck, CheckCircle2, KeyRound, Lock, Sparkles, Trash2, UserCheck } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useApp } from '../context/AppContext';
-import { formatVnDateTime } from '../lib/i18n';
+import { formatLanguage, formatRole, formatTier, formatTopic, formatTrack, formatVnDateTime } from '../lib/i18n';
 import { VerdictBadge } from '../components/VerdictBadge';
 import type { Verdict } from '../types/duckoj';
 
@@ -40,7 +40,7 @@ interface MeStats {
 }
 
 export function DashboardPage() {
-  const { user, authLoading, refreshUser, logout, locale, navigate } = useApp();
+  const { user, authLoading, refreshUser, logout, locale, t, navigate } = useApp();
   const [stats, setStats] = useState<MeStats | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -119,7 +119,7 @@ export function DashboardPage() {
       await refreshUser();
       setNameMsg(locale === 'vi' ? 'Đã cập nhật tên hiển thị.' : 'Display name updated.');
     } catch (err: any) {
-      setNameMsg(err?.message || 'Error');
+      setNameMsg(err?.message || (locale === 'vi' ? 'Không thể cập nhật tên hiển thị.' : 'Could not update display name.'));
     }
   };
 
@@ -153,7 +153,7 @@ export function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
           <p className="text-xs font-mono text-amber-700 dark:text-amber-400">
-            @{user.handle} · {user.role}
+            @{user.handle} · {formatRole(user.role, locale)}
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-display mt-1">
             {user.name}
@@ -193,7 +193,7 @@ export function DashboardPage() {
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
           <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
             <Sparkles className="w-4 h-4" />
-            <span>{locale === 'vi' ? 'Thành thạo (tự giải)' : 'Mastered'}</span>
+            <span>{locale === 'vi' ? 'Thành thạo' : 'Mastered'}</span>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2 tabular-nums font-display">
             {stats?.mastered_count ?? 0}
@@ -212,7 +212,7 @@ export function DashboardPage() {
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
             <UserCheck className="w-4 h-4" />
-            <span>{locale === 'vi' ? 'Bài đang thử' : 'In Progress'}</span>
+            <span>{locale === 'vi' ? 'Bài đang làm' : 'In Progress'}</span>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2 tabular-nums font-display">
             {stats?.attempted_count ?? 0}
@@ -249,7 +249,7 @@ export function DashboardPage() {
                   return (
                     <div
                       key={d.day}
-                      title={`${d.day}: ${d.count}`}
+                      title={`${d.day}: ${d.count} ${locale === 'vi' ? 'lần nộp' : 'attempts'}`}
                       className={`h-7 rounded ${tone} border border-slate-200/60 dark:border-slate-800 flex items-center justify-center text-[10px] font-mono text-slate-700 dark:text-slate-200 tabular-nums`}
                     >
                       {d.count > 0 ? d.count : ''}
@@ -272,7 +272,7 @@ export function DashboardPage() {
                   <div key={lv.level} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-slate-800 dark:text-slate-200">
-                        {locale === 'vi' ? `Cấp ${lv.level}` : `Level ${lv.level}`} · {lv.name}
+                        {locale === 'vi' ? `Cấp ${lv.level}` : `Level ${lv.level}`} · {formatTrack(lv.level, lv.name, locale)}
                       </span>
                       <span className="font-mono text-slate-500 dark:text-slate-400 tabular-nums">
                         {lv.solved}/{lv.total} ({pct}%)
@@ -303,7 +303,9 @@ export function DashboardPage() {
                     className="text-left p-3 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-amber-500 transition-colors"
                   >
                     <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate">{tp.name_vi}</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
+                        {formatTopic(tp.slug, tp.name_vi, locale)}
+                      </span>
                       <span className="font-mono text-slate-500 tabular-nums">
                         {tp.solved}/{tp.total}
                       </span>
@@ -339,7 +341,7 @@ export function DashboardPage() {
                       {rec.title}
                     </a>
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                      {rec.lesson_code} · {rec.difficulty} · {rec.kind === 'native' ? 'DuckOJ Judge' : 'External'}
+                      {rec.lesson_code} · {formatTier(rec.difficulty, locale)} · {rec.kind === 'native' ? t.nativeBadge : t.externalBadge}
                     </p>
                   </div>
                   <button
@@ -390,7 +392,7 @@ export function DashboardPage() {
                         {sub.problem_title}
                       </a>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
-                        {formatVnDateTime(sub.submitted_at)} · {sub.language === 'cpp17' ? 'C++17' : 'Python 3'}
+                        {formatVnDateTime(sub.submitted_at)} · {formatLanguage(sub.language)}
                       </p>
                     </div>
                     <VerdictBadge verdict={sub.verdict} status={sub.status} compact />
@@ -445,7 +447,7 @@ export function DashboardPage() {
               type="password"
               required
               minLength={8}
-              placeholder={locale === 'vi' ? 'Mật khẩu mới (>= 8 ký tự)' : 'New password (>= 8 chars)'}
+              placeholder={locale === 'vi' ? 'Mật khẩu mới (tối thiểu 8 ký tự)' : 'New password (min 8 chars)'}
               value={newPw}
               onChange={(e) => setNewPw(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"

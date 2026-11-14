@@ -349,11 +349,13 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
   const parsed = parseRawMarkdownSeed(assetsDir);
   const natives = generateNativeProblems();
   const seedFingerprint = hashObj({
-    tracks: TRACKS.length,
-    lessons: LESSONS_META.length,
-    rawExt: parsed.problems.length,
-    rawLinks: parsed.lessonProblems.length,
+    tracks: TRACKS,
+    topics: TOPICS,
+    lessonsMeta: LESSONS_META,
+    parsedProblems: parsed.problems,
+    parsedLinks: parsed.lessonProblems,
     natives,
+    contestCopyVersion: 2,
   });
 
   const existingSeed = db
@@ -457,8 +459,8 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
       const lessonHints = [
         { level: 1, type: 'nudge', text_md: `Đọc kỹ điều kiện biên và độ phức tạp yêu cầu (${meta.complexity}) của bài **${meta.title}**.` },
         { level: 2, type: 'approach', text_md: `Phác thảo trạng thái cốt lõi và công thức chuyển đổi trước khi cài đặt.` },
-        { level: 3, type: 'idea', text_md: `Kiểm tra lại các lỗi hay gặp trong mục 5 (tràn số \`long long\`, chỉ số 0/1-based).` },
-        { level: 4, type: 'code', text_md: 'Xem đầy đủ cài đặt ở mục **Code mẫu C++** phía trên.' },
+        { level: 3, type: 'idea', text_md: `Kiểm tra lại các lỗi hay gặp trong mục 4 (Lỗi thường gặp) như tràn số \`long long\` hoặc nhầm chỉ số 0/1-based.` },
+        { level: 4, type: 'code', text_md: 'Xem đầy đủ cài đặt ở mục **2. Code mẫu C++** phía trên.' },
       ];
 
       const chash = hashObj({ meta, content });
@@ -538,6 +540,7 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
     `);
     const insertProbTopic = db.prepare('INSERT OR IGNORE INTO problem_topics (problem_id, topic_slug) VALUES (?, ?)');
 
+    const updateProbLicense = db.prepare('UPDATE problems SET license_note = ? WHERE id = ? AND license_note <> ?');
     for (const p of parsed.problems) {
       const existing = selectProb.get(p.source, p.source_id) as { id: number } | undefined;
       let pid: number;
@@ -566,6 +569,7 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
         pid = Number(res.lastInsertRowid);
       } else {
         pid = Number(existing.id);
+        updateProbLicense.run(p.license_note, pid, p.license_note);
       }
       problemIdBySlug.set(p.slug, pid);
       for (const ts of p.topics) {
@@ -723,7 +727,7 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
             0, // Native problems appear first in lesson tabs
             'approved',
             'strong',
-            'Bài Native chính thức của DuckOJ.',
+            'Bài tập chấm trực tiếp chính thức của DuckOJ.',
             adminId,
             nowIso
           );
@@ -731,7 +735,12 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
       }
     }
 
-    // 7. Seed 2 sample contests if empty
+    // 7. Seed 2 sample contests if empty (and keep description copy up to date)
+    const weeklyDesc =
+      'Kỳ thi luyện tập hàng tuần theo thể thức ICPC (phạt 20 phút cho mỗi lần nộp sai trước khi AC, không tính phạt lỗi biên dịch CE). Gồm 4 bài chấm trực tiếp từ Cấp 0 đến Cấp 2.';
+    const springDesc =
+      'Kỳ thi thử thách gồm các bài Quy hoạch động, Dijkstra và LCA trên cây. Đề bài sẽ tự động mở khóa đúng thời điểm bắt đầu.';
+
     const contestCount = (db.prepare('SELECT COUNT(*) AS c FROM contests').get() as { c: number }).c;
     if (contestCount === 0) {
       const activeStart = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
@@ -748,7 +757,7 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
           .run(
             'duckoj-weekly-1',
             'DuckOJ Weekly Round #1 — Nhập môn & Cơ bản',
-            'Kỳ thi luyện tập hàng tuần theo thể thức ICPC (phạt 20 phút mỗi lần nộp sai trước khi AC, không phạt CE). Gồm 4 bài Native từ Cấp 0 đến Cấp 2.',
+            weeklyDesc,
             activeStart,
             activeEnd,
             adminId
@@ -808,7 +817,7 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
           .run(
             'duckoj-cup-spring',
             'DuckOJ Cup Mùa Xuân — Trung cấp & Nâng cao',
-            'Kỳ thi thử thách gồm các bài Quy hoạch động, Dijkstra và LCA trên cây. Đề bài sẽ tự động mở khóa đúng giờ bắt đầu.',
+            springDesc,
             upcomingStart,
             upcomingEnd,
             adminId
@@ -829,6 +838,9 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
           );
         }
       });
+    } else {
+      db.prepare('UPDATE contests SET description_md = ? WHERE slug = ?').run(weeklyDesc, 'duckoj-weekly-1');
+      db.prepare('UPDATE contests SET description_md = ? WHERE slug = ?').run(springDesc, 'duckoj-cup-spring');
     }
 
     // 8. Seed initial sample report so /admin/reports is non-empty

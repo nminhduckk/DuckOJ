@@ -154,7 +154,7 @@ export function evaluateHintUnlock(
 ): HintUnlockDecision {
   const nextLevel = progress.hint_level + 1;
   if (nextLevel > 4) {
-    return { allowed: false, nextLevel: 4, reason: 'Bạn đã mở khóa toàn bộ 4 mức gợi ý.' };
+    return { allowed: false, nextLevel: 4, reason: 'Bạn đã mở khóa toàn bộ 4 tầng gợi ý.' };
   }
 
   if (progress.hint_unlocked_at) {
@@ -182,7 +182,7 @@ export function evaluateHintUnlock(
       nextLevel: 1,
       needsAttempts: 1,
       unlockAt,
-      reason: 'Cần ít nhất 1 lần nộp bài hoặc đọc đề đủ 5 phút để mở Gợi ý mức 1.',
+      reason: 'Cần ít nhất 1 lần nộp bài hoặc đọc đề đủ 5 phút để mở Gợi ý tầng 1.',
     };
   }
 
@@ -194,7 +194,7 @@ export function evaluateHintUnlock(
       allowed: false,
       nextLevel: 2,
       needsAttempts: 2 - progress.attempts,
-      reason: `Cần thêm ${2 - progress.attempts} lần nộp bài để mở Gợi ý mức 2.`,
+      reason: `Cần thêm ${2 - progress.attempts} lần nộp bài để mở Gợi ý tầng 2.`,
     };
   }
 
@@ -206,7 +206,7 @@ export function evaluateHintUnlock(
       allowed: false,
       nextLevel: 3,
       needsAttempts: 3 - progress.attempts,
-      reason: `Cần thêm ${3 - progress.attempts} lần nộp bài để mở Gợi ý mức 3.`,
+      reason: `Cần thêm ${3 - progress.attempts} lần nộp bài để mở Gợi ý tầng 3.`,
     };
   }
 
@@ -218,6 +218,6 @@ export function evaluateHintUnlock(
     allowed: false,
     nextLevel: 4,
     needsAttempts: 5 - progress.attempts,
-    reason: `Cần thêm ${5 - progress.attempts} lần nộp bài (hoặc giải bài AC) để mở Code mẫu (mức 4).`,
+    reason: `Cần thêm ${5 - progress.attempts} lần nộp bài (hoặc giải đúng AC) để mở Code mẫu tham khảo (tầng 4).`,
   };
 }

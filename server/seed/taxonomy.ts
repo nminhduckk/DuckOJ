@@ -69,7 +69,7 @@ export const TRACKS: TrackDef[] = [
   {
     id: 1,
     name: 'Cơ bản',
-    description: 'Vét cạn, sắp xếp, chuỗi nâng cao, số học cơ bản, mô phỏng, ad hoc, tham lam, hai con trỏ và mảng cộng dồn.',
+    description: 'Duyệt vét cạn, sắp xếp, chuỗi nâng cao, số học cơ bản, mô phỏng, bài toán xây dựng (ad hoc), tham lam, hai con trỏ và mảng cộng dồn.',
     estimated_duration: '1–2 tháng',
     cf_rating_range: '~800–1000',
     problem_rating_min: 800,
@@ -80,7 +80,7 @@ export const TRACKS: TrackDef[] = [
   {
     id: 2,
     name: 'Cơ bản+',
-    description: 'Thành thạo STL, cửa sổ trượt, tìm kiếm nhị phân trên đáp án, đếm hash, sàng Eratosthenes và lũy thừa nhanh.',
+    description: 'Thành thạo thư viện STL, cửa sổ trượt, tìm kiếm nhị phân theo đáp án, đếm bằng bảng băm, sàng Eratosthenes và lũy thừa nhanh.',
     estimated_duration: '1–2 tháng',
     cf_rating_range: '~1000–1200',
     problem_rating_min: 1000,
@@ -91,7 +91,7 @@ export const TRACKS: TrackDef[] = [
   {
     id: 3,
     name: 'Trung cấp 1',
-    description: 'Quy hoạch động cơ bản & trên lưới, duyệt đồ thị DFS/BFS, DSU, sàng tuyến tính, lũy thừa ma trận và DP trên DAG.',
+    description: 'Quy hoạch động cơ bản và trên lưới, duyệt đồ thị DFS/BFS, DSU, sàng tuyến tính, lũy thừa ma trận và quy hoạch động trên DAG.',
     estimated_duration: '2–3 tháng',
     cf_rating_range: '~1200–1500',
     problem_rating_min: 1200,
@@ -113,7 +113,7 @@ export const TRACKS: TrackDef[] = [
   {
     id: 5,
     name: 'Nâng cao',
-    description: 'LCA, HLD, Centroid, SCC, Cầu/Khớp, Max Flow, Ghép cặp, Convex Hull Trick, Mo và Sprague-Grundy.',
+    description: 'LCA, HLD, Centroid, thành phần liên thông mạnh, cầu/khớp, luồng cực đại, ghép cặp, Convex Hull Trick, Mo và Sprague-Grundy.',
     estimated_duration: '3–6 tháng',
     cf_rating_range: '~1800–2100',
     problem_rating_min: 1800,
@@ -124,7 +124,7 @@ export const TRACKS: TrackDef[] = [
   {
     id: 6,
     name: 'Chuyên gia',
-    description: 'FFT/NTT, Persistent Segment Tree, Li Chao, Link-Cut Tree, Hình học tính toán, Min-Cost Flow, Matroid và Suffix Automaton.',
+    description: 'FFT/NTT, Persistent Segment Tree, Li Chao, Link-Cut Tree, hình học tính toán, luồng chi phí cực tiểu, Matroid và Suffix Automaton.',
     estimated_duration: 'Dài hạn',
     cf_rating_range: '2100+',
     problem_rating_min: 2000,
@@ -488,7 +488,7 @@ const makeQuiz = (title: string, topicDesc: string, extra: QuizQuestion[]): Quiz
         'Tràn số 32-bit (dùng int thay vì long long) hoặc thiếu xử lý trường hợp biên (N nhỏ nhất/lớn nhất)',
         'Dùng std::vector thay cho mảng tĩnh',
         'Tách hàm phụ quá nhiều',
-        'In dấu cách thừa ở cuối dòng khi checker dùng tokens',
+        'In khoảng trắng thừa ở cuối dòng khi trình chấm dùng chế độ so khớp token',
       ],
       answer_index: 0,
       explain: 'Các bài từ trung cấp trở lên thường có giá trị trung gian vượt $2^{31}-1$ hoặc có test biên đặc biệt.',
@@ -1470,6 +1470,6 @@ int main() {
     quiz: makeQuiz('Tổng hợp cấp 6, phần 1', 'data-structures', [{ q: 'Cấu trúc nào giải quyết truy vấn "thêm đoạn thẳng mới và lấy min tại x" khi hệ số góc không đơn điệu?', options: ['Li Chao Tree', 'Sparse Table', 'Fenwick Tree', 'DSU'], answer_index: 0, explain: 'Li Chao Tree lưu phân hoạch đường thẳng trên từng đoạn của Segment Tree.' }]) },
   { code: '6.12', slug: 'level6-review-2', track_id: 6, sort_order: 12, title: 'Tổng hợp cấp 6, phần 2', prereqs: ['6.11'], topics: [], fit_check: false, complexity: 'Tổng hợp',
     objectives: ['Tổng ôn toàn bộ 74 chuyên đề từ Nhập môn tới Chuyên gia', 'Luyện tốc độ phân tích mô hình luồng, matroid và chia căn', 'Sẵn sàng chinh phục kỳ thi HSG Quốc gia, ICPC và IOI'],
-    sources: [{ kind: 'handbook', title: 'CSES Handbook — Chương 9–10', url: 'https://cses.fi/book/book.pdf' }],
+    sources: [{ kind: 'handbook', title: 'CSES Handbook — Chương 26–30: Chuỗi, Hình học & Chủ đề nâng cao', url: 'https://cses.fi/book/book.pdf' }],
     quiz: makeQuiz('Tổng hợp cấp 6, phần 2', 'dp', [{ q: 'Knuth Optimization áp dụng được khi nào trong bài toán chia đoạn DP 2 chiều?', options: ['Khi hàm chi phí thỏa bất đẳng thức tứ giác và đơn điệu bao hàm', 'Khi mảng luôn tăng', 'Khi chi phí bằng 1', 'Không có điều kiện'], answer_index: 0, explain: 'Giảm từ O(N^3) xuống O(N^2) nhờ chặn opt[l][r-1] <= opt[l][r] <= opt[l+1][r].' }]) },
 ];

@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Code2, Eye, X } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useApp } from '../context/AppContext';
-import { formatVnDateTime } from '../lib/i18n';
+import { formatLanguage, formatVnDateTime } from '../lib/i18n';
 import { VerdictBadge } from '../components/VerdictBadge';
+import { HighlightedCodeBlock } from '../components/HighlightedCodeBlock';
 import type { SubmissionDetail, Verdict } from '../types/duckoj';
 
 interface SubmissionFeedRow {
@@ -166,7 +167,7 @@ export function SubmissionsPage() {
                 <th className="py-3 px-4 font-semibold">{locale === 'vi' ? 'Bài tập' : 'Problem'}</th>
                 <th className="py-3 px-4 font-semibold">{locale === 'vi' ? 'Ngôn ngữ' : 'Lang'}</th>
                 <th className="py-3 px-4 font-semibold">{locale === 'vi' ? 'Kết quả' : 'Verdict'}</th>
-                <th className="py-3 px-4 font-semibold text-right">Test</th>
+                <th className="py-3 px-4 font-semibold text-right">{locale === 'vi' ? 'Số test' : 'Tests'}</th>
                 <th className="py-3 px-4 font-semibold text-right">{locale === 'vi' ? 'Thời gian chạy' : 'Time'}</th>
                 <th className="py-3 px-4 font-semibold text-right">{locale === 'vi' ? 'Chi tiết' : 'Code'}</th>
               </tr>
@@ -213,7 +214,7 @@ export function SubmissionsPage() {
                         </a>
                       </td>
                       <td className="py-3 px-4 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                        {row.language === 'cpp17' ? 'C++17' : 'Python 3'}
+                        {formatLanguage(row.language)}
                       </td>
                       <td className="py-3 px-4">
                         <VerdictBadge verdict={row.verdict} status={row.status} compact />
@@ -305,7 +306,7 @@ export function SubmissionsPage() {
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                aria-label="Close"
+                aria-label={locale === 'vi' ? 'Đóng' : 'Close'}
                 className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
@@ -331,11 +332,9 @@ export function SubmissionsPage() {
 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-                    {locale === 'vi' ? 'Mã nguồn' : 'Source Code'} ({selected.language === 'cpp17' ? 'C++17' : 'Python 3'})
+                    {locale === 'vi' ? 'Mã nguồn' : 'Source Code'} ({formatLanguage(selected.language)})
                   </p>
-                  <pre className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-950 text-slate-100 p-4 text-xs font-mono overflow-x-auto leading-relaxed">
-                    {selected.source_code}
-                  </pre>
+                  <HighlightedCodeBlock code={selected.source_code} language={selected.language} />
                 </div>
 
                 {selected.tests && selected.tests.length > 0 && (

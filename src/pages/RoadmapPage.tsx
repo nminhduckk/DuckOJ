@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, Compass } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { formatTrack, formatTrackRange } from '../lib/i18n';
 import { useApp } from '../context/AppContext';
 import { LessonStatusLabel } from '../components/VerdictBadge';
 import type { LessonStatus, RoadmapEdge, RoadmapNode, TrackItem } from '../types/duckoj';
@@ -136,7 +137,7 @@ export function RoadmapPage() {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
           <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
-            {locale === 'vi' ? 'Đồ thị kỹ năng DAG 74 bài học' : '74-Lesson Directed Acyclic Skill Tree'}
+            {locale === 'vi' ? 'Sơ đồ kỹ năng 74 bài học' : '74-Lesson Directed Skill Roadmap'}
           </p>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display mt-1">
             {locale === 'vi' ? 'Lộ trình học lập trình thi đấu' : 'Competitive Programming Roadmap'}
@@ -170,7 +171,7 @@ export function RoadmapPage() {
         <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
           {(
             [
-              { key: 'all', label: locale === 'vi' ? 'Tất cả (74)' : 'All (74)' },
+              { key: 'all', label: locale === 'vi' ? `Tất cả (${nodes.length || 74})` : `All (${nodes.length || 74})` },
               { key: 'done', label: locale === 'vi' ? 'Hoàn thành' : 'Done' },
               { key: 'reading', label: locale === 'vi' ? 'Đang học' : 'Reading' },
               { key: 'not_started', label: locale === 'vi' ? 'Chưa học' : 'Not started' },
@@ -255,10 +256,12 @@ export function RoadmapPage() {
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <div className="flex items-baseline gap-3">
                     <h2 className="text-lg font-bold text-slate-900 dark:text-white font-display">
-                      {locale === 'vi' ? `Cấp ${track.id}: ${track.name}` : `Level ${track.id}: ${track.name}`}
+                      {locale === 'vi'
+                        ? `Cấp ${track.id}: ${formatTrack(track.id, track.name, locale)}`
+                        : `Level ${track.id}: ${formatTrack(track.id, track.name, locale)}`}
                     </h2>
                     <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                      {track.cf_rating_range}
+                      {formatTrackRange(track.id, track.cf_rating_range, locale)}
                     </span>
                   </div>
                   <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
@@ -312,7 +315,7 @@ export function RoadmapPage() {
 
                         <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800 tabular-nums">
                           <span>
-                            {node.approved_problems} {locale === 'vi' ? 'bài' : 'probs'}
+                            {node.approved_problems} {locale === 'vi' ? 'bài tập' : 'problems'}
                             {node.native_problems > 0
                               ? ` (${node.native_problems} ${locale === 'vi' ? 'chấm trực tiếp' : 'native'})`
                               : ''}
@@ -325,7 +328,7 @@ export function RoadmapPage() {
                           {prereqs.length === 0 && (
                             <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
                               <CheckCircle2 className="w-3 h-3" />
-                              <span>{locale === 'vi' ? 'Gốc' : 'Start'}</span>
+                              <span>{locale === 'vi' ? 'Mở đầu' : 'Start'}</span>
                             </span>
                           )}
                         </div>

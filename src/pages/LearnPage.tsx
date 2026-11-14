@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { formatTopic, formatTrack } from '../lib/i18n';
 import { useApp } from '../context/AppContext';
 import { LessonStatusLabel } from '../components/VerdictBadge';
 import type { RoadmapNode, TrackItem } from '../types/duckoj';
@@ -50,12 +51,12 @@ export function LearnPage() {
     return nodes.filter((n) => {
       if (levelFilter !== null && n.track_id !== levelFilter) return false;
       if (q) {
-        const hay = `${n.code} ${n.title} ${n.topics.map((tp) => tp.name_vi).join(' ')}`.toLowerCase();
+        const hay = `${n.code} ${n.title} ${n.topics.map((tp) => `${tp.name_vi} ${formatTopic(tp.slug, tp.name_vi, locale)}`).join(' ')}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [nodes, levelFilter, query]);
+  }, [nodes, levelFilter, query, locale]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-6">
@@ -108,7 +109,9 @@ export function LearnPage() {
                 : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            {locale === 'vi' ? `Cấp ${tr.id} · ${tr.name}` : `L${tr.id} · ${tr.name}`}
+            {locale === 'vi'
+              ? `Cấp ${tr.id} · ${formatTrack(tr.id, tr.name, locale)}`
+              : `L${tr.id} · ${formatTrack(tr.id, tr.name, locale)}`}
           </button>
         ))}
       </div>
@@ -162,12 +165,13 @@ export function LearnPage() {
                       </a>
                       {n.topics.length > 0 && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          {n.topics.map((tp) => tp.name_vi).join(' · ')}
+                          {n.topics.map((tp) => formatTopic(tp.slug, tp.name_vi, locale)).join(' · ')}
                         </p>
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                      {locale === 'vi' ? `Cấp ${n.track_id}` : `Level ${n.track_id}`} · {trackNameMap.get(n.track_id) || ''}
+                      {locale === 'vi' ? `Cấp ${n.track_id}` : `Level ${n.track_id}`} ·{' '}
+                      {formatTrack(n.track_id, trackNameMap.get(n.track_id) || '', locale)}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
                       {n.complexity}

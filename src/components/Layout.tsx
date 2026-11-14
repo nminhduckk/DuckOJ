@@ -42,7 +42,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </a>
 
           {/* Zone 2: 5 concise single-line text nav links */}
-          <nav aria-label="Điều hướng chính" className="hidden md:flex items-center gap-6">
+          <nav aria-label={locale === 'vi' ? 'Điều hướng chính' : 'Primary navigation'} className="hidden md:flex items-center gap-6">
             {navItems.map((item) => {
               const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`));
               return (
@@ -155,7 +155,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setMobileOpen((o) => !o)}
-              aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
+              aria-label={mobileOpen ? (locale === 'vi' ? 'Đóng menu' : 'Close menu') : locale === 'vi' ? 'Mở menu' : 'Open menu'}
               aria-expanded={mobileOpen}
               className="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
@@ -270,7 +270,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setLocale(locale === 'vi' ? 'en' : 'vi')}
-              aria-label="Switch language"
+              aria-label={locale === 'vi' ? 'Chuyển sang tiếng Anh' : 'Switch to Vietnamese'}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900 whitespace-nowrap"
             >
               <Globe className="w-3.5 h-3.5" />

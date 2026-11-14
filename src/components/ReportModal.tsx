@@ -40,7 +40,7 @@ export function ReportModal({
       setSuccessId(res.id);
       setMessage('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Không thể gửi báo cáo.');
+      setError(err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể gửi báo cáo.' : 'Failed to submit report.');
     } finally {
       setSubmitting(false);
     }
@@ -117,7 +117,7 @@ export function ReportModal({
                 type="text"
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value)}
-                placeholder="VD: nat-sum-diff hoặc 0.1"
+                placeholder={locale === 'vi' ? 'Ví dụ: nat-sum-diff hoặc 0.1' : 'e.g. nat-sum-diff or 0.1'}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
               />
             </div>

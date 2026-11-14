@@ -608,7 +608,7 @@ export function parseRawMarkdownSeed(assetsDir: string): SeedParseResult {
             cf_rating,
             topics: parsedTopics.length > 0 ? parsedTopics : ['implementation'],
             editorial_url: parsedSrc.editorial_url,
-            license_note: `Đề thuộc ${parsedSrc.source}. DuckOJ chỉ lưu metadata, phân loại chủ đề và liên kết tới đề gốc.`,
+            license_note: `Đề bài gốc thuộc ${parsedSrc.source}. DuckOJ chỉ lưu thông tin mô tả, phân loại chủ đề và liên kết tới đề gốc.`,
             status: 'published',
             seed_origin: `${filename}#${currentLessonCode}`,
             link_ok: true,
@@ -632,10 +632,10 @@ export function parseRawMarkdownSeed(assetsDir: string): SeedParseResult {
           if (isSupplement) {
             if (fit === 'strong') {
               reviewStatus = 'pending';
-              reviewerNote = 'Từ bộ bổ sung — khớp chủ đề cụ thể, chờ reviewer xác nhận.';
+              reviewerNote = 'Từ bộ bài tập bổ sung — khớp chủ đề cụ thể, chờ kiểm duyệt viên xác nhận.';
             } else {
               reviewStatus = 'auto_rejected';
-              reviewerNote = `Tự động loại bởi topic_fit (${fit}): nhãn bài không trùng tag cụ thể của bài học ${currentLessonCode}.`;
+              reviewerNote = `Tự động từ chối theo bộ lọc chủ đề (${fit}): nhãn bài không khớp thẻ chuyên đề của bài học ${currentLessonCode}.`;
             }
           } else {
             // Curated khung_noi_dung_* entries: Wave 1 (0..3) approved unless fit === 'none'; Wave 2 strong approved, weak/none pending for review queue
@@ -647,8 +647,8 @@ export function parseRawMarkdownSeed(assetsDir: string): SeedParseResult {
               reviewStatus = 'pending';
               reviewerNote =
                 fit === 'none'
-                  ? 'Cờ đỏ: không có tag chung với bài học.'
-                  : 'Cờ vàng: chỉ khớp tag chung hoặc bài tổng hợp.';
+                  ? 'Cờ đỏ: không có thẻ chủ đề chung với bài học.'
+                  : 'Cờ vàng: chỉ khớp thẻ chủ đề chung hoặc bài tổng hợp.';
             }
           }
 

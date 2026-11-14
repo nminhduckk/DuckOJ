@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, Cpu, ExternalLink, HelpCircle } from 'lucide-react';
 import { apiFetch, ApiError } from '../lib/api';
+import { formatHintType, formatSourceKind, formatTier, formatTrack, formatTrackRange } from '../lib/i18n';
 import { useApp } from '../context/AppContext';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { LessonStatusLabel, ProblemStatusLabel } from '../components/VerdictBadge';
@@ -46,7 +47,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
         setOpenHints(new Set());
       })
       .catch((err) => {
-        setError(err instanceof ApiError ? err.message : 'Không thể tải bài học.');
+        setError(err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể tải bài học.' : 'Failed to load lesson.');
       })
       .finally(() => setLoading(false));
   };
@@ -111,7 +112,9 @@ export function LessonDetailPage({ slug }: { slug: string }) {
         },
       });
     } catch (err) {
-      setQuizError(err instanceof ApiError ? err.message : 'Không thể nộp quiz.');
+      setQuizError(
+        err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể nộp bài trắc nghiệm.' : 'Failed to submit quiz.'
+      );
     } finally {
       setQuizSubmitting(false);
     }
@@ -129,7 +132,9 @@ export function LessonDetailPage({ slug }: { slug: string }) {
   if (error || !lesson) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16 text-center space-y-4">
-        <p className="text-base text-rose-600 dark:text-rose-400">{error || 'Không tìm thấy bài học.'}</p>
+        <p className="text-base text-rose-600 dark:text-rose-400">
+          {error || (locale === 'vi' ? 'Không tìm thấy bài học.' : 'Lesson not found.')}
+        </p>
         <button
           type="button"
           onClick={() => navigate('/learn')}
@@ -149,7 +154,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
     { id: 'sec-sources', label: locale === 'vi' ? '5. Tài liệu nguồn' : '5. References' },
     { id: 'sec-problems', label: locale === 'vi' ? '6. Bài tập thực hành' : '6. Practice Problems' },
     { id: 'sec-hints', label: locale === 'vi' ? '7. Gợi ý theo bài' : '7. Lesson Hints' },
-    { id: 'sec-quiz', label: locale === 'vi' ? '8. Quiz kiểm tra' : '8. Lesson Quiz' },
+    { id: 'sec-quiz', label: locale === 'vi' ? '8. Trắc nghiệm củng cố' : '8. Lesson Quiz' },
   ];
 
   return (
@@ -201,12 +206,13 @@ export function LessonDetailPage({ slug }: { slug: string }) {
           </span>
           <span aria-hidden="true">·</span>
           <span>
-            Cấp {lesson.track_id} — {lesson.track_name}
+            {locale === 'vi' ? `Cấp ${lesson.track_id}` : `Level ${lesson.track_id}`} —{' '}
+            {formatTrack(lesson.track_id, lesson.track_name, locale)}
           </span>
           <span aria-hidden="true">·</span>
           <span className="font-mono">{lesson.complexity}</span>
           <span aria-hidden="true">·</span>
-          <span>{lesson.cf_rating_range}</span>
+          <span>{formatTrackRange(lesson.track_id, lesson.cf_rating_range, locale)}</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white font-display">
           {lesson.title}
@@ -313,7 +319,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                 >
                   <div>
                     <p className="font-medium text-slate-900 dark:text-white">{src.title}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{src.kind}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{formatSourceKind(src.kind, locale)}</p>
                   </div>
                   <ExternalLink className="w-4 h-4 text-slate-400 shrink-0" />
                 </a>
@@ -339,7 +345,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    {tier === 'all' ? (locale === 'vi' ? 'Tất cả' : 'All') : tier}
+                    {tier === 'all' ? (locale === 'vi' ? 'Tất cả' : 'All') : formatTier(tier, locale)}
                   </button>
                 ))}
               </div>
@@ -371,7 +377,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                           </span>
                         )}
                         <span aria-hidden="true">·</span>
-                        <span>{p.tier || p.difficulty}</span>
+                        <span>{formatTier(p.tier || p.difficulty, locale)}</span>
                         {p.cf_rating && (
                           <>
                             <span aria-hidden="true">·</span>
@@ -443,7 +449,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                       <span className="inline-flex items-center gap-2">
                         <HelpCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                         <span>
-                          {locale === 'vi' ? `Gợi ý mức ${h.level}` : `Hint Level ${h.level}`} · {h.type}
+                          {locale === 'vi' ? `Gợi ý tầng ${h.level}` : `Hint Tier ${h.level}`} · {formatHintType(h.type, locale)}
                         </span>
                       </span>
                       {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -524,7 +530,13 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                             : 'text-rose-700 dark:text-rose-400'
                         }`}
                       >
-                        {resItem.correct ? '✓ Chính xác — ' : '✗ Chưa đúng — '}
+                        {resItem.correct
+                          ? locale === 'vi'
+                            ? '✓ Chính xác — '
+                            : '✓ Correct — '
+                          : locale === 'vi'
+                            ? '✗ Chưa đúng — '
+                            : '✗ Incorrect — '}
                         {resItem.explain}
                       </p>
                     )}
@@ -550,7 +562,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                 {!user && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {locale === 'vi'
-                      ? 'Đăng nhập để lưu điểm quiz và tiến độ bài học.'
+                      ? 'Đăng nhập để lưu điểm trắc nghiệm và tiến độ bài học.'
                       : 'Sign in to save your quiz score and lesson progress.'}
                   </p>
                 )}
@@ -561,10 +573,10 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                 >
                   {quizSubmitting
                     ? locale === 'vi'
-                      ? 'Đang chấm quiz...'
+                      ? 'Đang chấm bài...'
                       : 'Grading...'
                     : locale === 'vi'
-                      ? 'Nộp bài kiểm tra'
+                      ? 'Nộp bài trắc nghiệm'
                       : 'Submit Quiz'}
                 </button>
               </div>

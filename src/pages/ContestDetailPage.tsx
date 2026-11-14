@@ -35,7 +35,7 @@ export function ContestDetailPage({ slug }: { slug: string }) {
       setContest(c);
       setStandings(st.items);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Không thể tải kỳ thi.');
+      setError(err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể tải thông tin kỳ thi.' : 'Failed to load contest.');
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,9 @@ export function ContestDetailPage({ slug }: { slug: string }) {
   if (error || !contest) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16 text-center space-y-4">
-        <p className="text-rose-600 dark:text-rose-400">{error || 'Không tìm thấy contest.'}</p>
+        <p className="text-rose-600 dark:text-rose-400">
+          {error || (locale === 'vi' ? 'Không tìm thấy kỳ thi.' : 'Contest not found.')}
+        </p>
         <button
           type="button"
           onClick={() => navigate('/contests')}
@@ -118,7 +120,11 @@ export function ContestDetailPage({ slug }: { slug: string }) {
                 {formatVnDateTime(contest.start_at)} → {formatVnDateTime(contest.end_at)}
               </span>
               <span aria-hidden="true">·</span>
-              <span>Phạt {contest.penalty_minutes} phút/lần sai</span>
+              <span>
+                {locale === 'vi'
+                  ? `Phạt ${contest.penalty_minutes} phút/lần sai`
+                  : `${contest.penalty_minutes} min wrong-submission penalty`}
+              </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-display">
               {contest.title}
@@ -172,7 +178,7 @@ export function ContestDetailPage({ slug }: { slug: string }) {
             <table className="w-full text-sm text-left border-collapse tabular-nums">
               <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Mã</th>
+                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Mã' : 'Code'}</th>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Tên bài' : 'Problem'}</th>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Giới hạn' : 'Limits'}</th>
                   <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Thao tác' : 'Action'}</th>
@@ -233,8 +239,8 @@ export function ContestDetailPage({ slug }: { slug: string }) {
                 <tr>
                   <th className="px-4 py-3 font-medium">#</th>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Thí sinh' : 'Participant'}</th>
-                  <th className="px-4 py-3 font-medium text-right">Solved</th>
-                  <th className="px-4 py-3 font-medium text-right">Penalty</th>
+                  <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Số bài giải được' : 'Solved'}</th>
+                  <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Điểm phạt' : 'Penalty'}</th>
                   {(contest.problems || []).map((p) => (
                     <th key={p.label} className="px-3 py-3 font-mono font-semibold text-center">
                       {p.label}
@@ -270,7 +276,7 @@ export function ContestDetailPage({ slug }: { slug: string }) {
                             key={p.label}
                             className="px-3 py-3 text-center font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400"
                           >
-                            +{wrong > 0 ? wrong : ''} ({cell.ac_minutes ?? 0}m)
+                            +{wrong > 0 ? wrong : ''} ({cell.ac_minutes ?? 0}{locale === 'vi' ? 'p' : 'm'})
                           </td>
                         );
                       }

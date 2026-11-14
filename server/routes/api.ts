@@ -749,7 +749,7 @@ export function createApiRouter(db: DatabaseSync) {
       return;
     }
     if (typeof handle !== 'string' || !/^[a-z0-9_]{3,20}$/.test(handle.trim())) {
-      errResp(res, 422, 'validation_error', 'Handle phải dài 3–20 ký tự (chữ thường, số, dấu _).');
+      errResp(res, 422, 'validation_error', 'Tên đăng nhập phải dài 3–20 ký tự (chữ thường, số, dấu _).');
       return;
     }
     if (typeof name !== 'string' || name.trim().length < 1 || name.trim().length > 60) {
@@ -767,7 +767,7 @@ export function createApiRouter(db: DatabaseSync) {
       .prepare('SELECT id FROM users WHERE email = ? OR handle = ?')
       .get(cleanEmail, cleanHandle);
     if (existing) {
-      errResp(res, 409, 'conflict', 'Email hoặc handle đã được sử dụng.');
+      errResp(res, 409, 'conflict', 'Email hoặc tên đăng nhập đã được sử dụng.');
       return;
     }
 
@@ -850,7 +850,7 @@ export function createApiRouter(db: DatabaseSync) {
   router.post('/auth/refresh', (req, res) => {
     const xrw = req.headers['x-requested-with'];
     if (xrw !== 'duckoj' && xrw !== 'cplearn') {
-      errResp(res, 403, 'forbidden', 'Thiếu header xác thực CSRF X-Requested-With.');
+      errResp(res, 403, 'forbidden', 'Thiếu thông tin xác thực bảo mật CSRF.');
       return;
     }
     const cookies = parseCookies(req.headers.cookie);
@@ -866,7 +866,7 @@ export function createApiRouter(db: DatabaseSync) {
       .get(thash) as any;
 
     if (!rtRow) {
-      errResp(res, 401, 'unauthorized', 'Refresh token không hợp lệ.');
+      errResp(res, 401, 'unauthorized', 'Phiên đăng nhập không hợp lệ.');
       return;
     }
 
@@ -874,12 +874,12 @@ export function createApiRouter(db: DatabaseSync) {
     if (rtRow.revoked_at) {
       db.prepare("UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE family_id = ?").run(rtRow.family_id);
       clearRefreshCookie(res);
-      errResp(res, 401, 'unauthorized', 'Phát hiện dùng lại token cũ, phiên đã bị thu hồi.');
+      errResp(res, 401, 'unauthorized', 'Phát hiện sử dụng lại phiên cũ; phiên đăng nhập đã bị thu hồi.');
       return;
     }
 
     if (Date.parse(rtRow.expires_at) < Date.now()) {
-      errResp(res, 401, 'unauthorized', 'Refresh token đã hết hạn.');
+      errResp(res, 401, 'unauthorized', 'Phiên đăng nhập đã hết hạn.');
       return;
     }
 
@@ -1111,7 +1111,7 @@ export function createApiRouter(db: DatabaseSync) {
       return;
     }
     if (prob.kind !== 'external') {
-      errResp(res, 422, 'validation_error', 'Bài Native chỉ cập nhật trạng thái thông qua máy chấm.');
+      errResp(res, 422, 'validation_error', 'Chỉ bài tập chấm trực tiếp mới cập nhật trạng thái thông qua máy chấm.');
       return;
     }
     const { status, notes } = req.body || {};
@@ -1328,7 +1328,7 @@ export function createApiRouter(db: DatabaseSync) {
       return;
     }
     if (prob.kind !== 'native') {
-      errResp(res, 422, 'validation_error', 'Chỉ bài tập Native mới nộp chấm trực tiếp tại DuckOJ.');
+      errResp(res, 422, 'validation_error', 'Chỉ bài tập chấm trực tiếp mới hỗ trợ nộp bài trên máy chấm DuckOJ.');
       return;
     }
 
@@ -1608,7 +1608,7 @@ export function createApiRouter(db: DatabaseSync) {
   router.get('/contests/:slug', (req: AuthedRequest, res) => {
     const c = db.prepare('SELECT * FROM contests WHERE slug = ?').get(req.params.slug) as any;
     if (!c) {
-      errResp(res, 404, 'not_found', 'Không tìm thấy contest.');
+      errResp(res, 404, 'not_found', 'Không tìm thấy kỳ thi.');
       return;
     }
 
@@ -1657,7 +1657,7 @@ export function createApiRouter(db: DatabaseSync) {
   router.post('/contests/:slug/join', requireAuth(db), (req: AuthedRequest, res) => {
     const c = db.prepare('SELECT id FROM contests WHERE slug = ?').get(req.params.slug) as { id: number } | undefined;
     if (!c) {
-      errResp(res, 404, 'not_found', 'Không tìm thấy contest.');
+      errResp(res, 404, 'not_found', 'Không tìm thấy kỳ thi.');
       return;
     }
     db.prepare('INSERT OR IGNORE INTO contest_participants (contest_id, user_id) VALUES (?, ?)').run(c.id, req.user!.id);
@@ -1675,7 +1675,7 @@ export function createApiRouter(db: DatabaseSync) {
 
     const c = db.prepare('SELECT * FROM contests WHERE slug = ?').get(slug) as any;
     if (!c) {
-      errResp(res, 404, 'not_found', 'Không tìm thấy contest.');
+      errResp(res, 404, 'not_found', 'Không tìm thấy kỳ thi.');
       return;
     }
 
@@ -1918,7 +1918,7 @@ export function createApiRouter(db: DatabaseSync) {
   router.post('/admin/problems/:slug/test-sets', requireRole(db, ['admin']), (req: AuthedRequest, res) => {
     const prob = db.prepare('SELECT id, kind, level FROM problems WHERE slug = ?').get(req.params.slug) as any;
     if (!prob || prob.kind !== 'native') {
-      errResp(res, 404, 'not_found', 'Không tìm thấy bài Native.');
+      errResp(res, 404, 'not_found', 'Không tìm thấy bài tập chấm trực tiếp.');
       return;
     }
 
@@ -1932,7 +1932,7 @@ export function createApiRouter(db: DatabaseSync) {
       )
       .get(prob.id, nowIso, nowIso) as { slug: string } | undefined;
     if (runningContest) {
-      errResp(res, 409, 'conflict', `Không thể đổi bộ test khi bài đang nằm trong contest đang diễn ra (${runningContest.slug}).`);
+      errResp(res, 409, 'conflict', `Không thể đổi bộ test khi bài tập đang thuộc kỳ thi diễn ra (${runningContest.slug}).`);
       return;
     }
 

@@ -333,6 +333,15 @@ class _Multiset:
     def count(self, x):
         return self._cnt.get(x, 0)
 
+    def find(self, x):
+        return x if self._cnt.get(x, 0) > 0 else None
+
+    def end(self):
+        return None
+
+    def erase(self, x):
+        self.erase_val(x)
+
     def empty(self):
         return self._len == 0
 
@@ -395,11 +404,27 @@ class _MaxPQ:
     def __len__(self):
         return len(self._h)
 
+class _CppQueue(collections.deque):
+    def push(self, x):
+        self.append(x)
+    def front(self):
+        return self[0]
+    def pop(self):
+        return self.popleft()
+    def empty(self):
+        return len(self) == 0
+    def size(self):
+        return len(self)
+
 class _CppVec(list):
     def push_back(self, x):
         self.append(x)
     def pop_back(self):
         return self.pop()
+    def push(self, x):
+        self.append(x)
+    def top(self):
+        return self[-1]
     def back(self):
         return self[-1]
     def size(self):
@@ -435,6 +460,12 @@ class _CppMap(collections.defaultdict):
         super().__init__(int)
     def count(self, k):
         return 1 if k in self else 0
+    def find(self, k):
+        return k if k in self else None
+    def end(self):
+        return None
+    def erase(self, k):
+        self.pop(k, None)
     def empty(self):
         return len(self) == 0
     def size(self):
@@ -447,6 +478,10 @@ class _CppSet(set):
         self.add(x)
     def erase(self, x):
         self.discard(x)
+    def find(self, x):
+        return x if x in self else None
+    def end(self):
+        return None
     def count(self, x):
         return 1 if x in self else 0
     def empty(self):
@@ -461,6 +496,10 @@ def _tolower(c):
 def _toupper(c):
     if isinstance(c, str): return c.upper()
     return c
+
+def _to_char(x):
+    if isinstance(x, str): return x[0] if x else chr(0)
+    return chr(int(x) & 0xFF)
 
 def _fmt_out(v):
     if isinstance(v, bool): return "1" if v else "0"
@@ -643,13 +682,20 @@ function findMatchingParen(code: string, openIdx: number): number {
 interface VarContext {
   types: Map<string, string>;
   structs: Map<string, string[]>;
+  structFields: Map<string, Map<string, string>>;
+  funcReturns: Map<string, string>;
+  userFuncs: Set<string>;
+  globals: Set<string>;
+  locals?: Set<string>;
+  currentReturnKind?: string;
+  loopCounter?: { n: number };
 }
 
 function isVectorKind(kind?: string): boolean {
   return kind === 'vector' || kind === 'vector_str' || kind === 'vector_i32' || kind === 'vector_i64';
 }
 
-function inferType(cppType: string): string {
+function inferType(cppType: string, structs?: Map<string, string[]>): string {
   const raw = cppType.trim();
   const hasUnsigned = /\bunsigned\b/.test(raw) || /\bu(?:int32_t|int64_t|ll)\b/.test(raw) || /\bsize_t\b/.test(raw);
   const t = raw.replace(/\b(const|unsigned|signed|static|inline)\b/g, '').trim();
@@ -670,6 +716,7 @@ function inferType(cppType: string): string {
   if (t.includes('string')) return 'string';
   if (t.includes('char')) return 'char';
   if (t.includes('bool')) return 'bool';
+  if (structs && structs.has(t)) return `struct:${t}`;
   if (/\b(?:long\s+long|ll|ull|int64_t|uint64_t|size_t)\b/.test(raw)) {
     return hasUnsigned ? 'uint64' : 'int64';
   }
@@ -697,9 +744,37 @@ function isPureInt32Arith(rawExpr: string, ctx: VarContext): boolean {
   if (/\(\s*(?:long\s+long|ll|ull|int64_t|uint64_t|size_t|double|float|long\s+double)\s*\)/.test(cleaned)) return false;
   if (/\b(?:LLONG_MAX|LLONG_MIN)\b/.test(cleaned)) return false;
 
-  const ids = cleaned.match(/\b[a-zA-Z_]\w*\b/g) || [];
+  // Strip arguments inside non-int32 function calls like qry(y) so int32 args don't falsely mark the call as int32
+  let scanTarget = '';
+  let callPos = 0;
+  const callRe = /\b([a-zA-Z_]\w*)\s*\(/g;
+  let cm: RegExpExecArray | null;
+  while ((cm = callRe.exec(cleaned)) !== null) {
+    const fnName = cm[1];
+    const retKind = ctx.funcReturns.get(fnName);
+    if (retKind && retKind !== 'int32' && retKind !== 'uint32') {
+      return false;
+    }
+    const openIdx = cleaned.indexOf('(', cm.index);
+    const closeIdx = findMatchingParen(cleaned, openIdx);
+    scanTarget += cleaned.slice(callPos, cm.index) + ' ';
+    if (retKind === 'int32') {
+      scanTarget += ' int32_call ';
+    } else if (!retKind && !['min', 'max', 'abs'].includes(fnName)) {
+      return false;
+    }
+    callPos = closeIdx + 1;
+    callRe.lastIndex = callPos;
+  }
+  scanTarget += cleaned.slice(callPos);
+
+  const ids = scanTarget.match(/\b[a-zA-Z_]\w*\b/g) || [];
   let hasInt32 = false;
   for (const id of ids) {
+    if (id === 'int32_call') {
+      hasInt32 = true;
+      continue;
+    }
     const t = ctx.types.get(id);
     if (
       t === 'int64' ||
@@ -710,7 +785,8 @@ function isPureInt32Arith(rawExpr: string, ctx: VarContext): boolean {
       t === 'vector_str' ||
       t === 'map' ||
       t === 'int' ||
-      t === 'vector'
+      t === 'vector' ||
+      (t && t.startsWith('struct:'))
     ) {
       return false;
     }
@@ -735,6 +811,8 @@ function translateValueExpr(rawExpr: string, ctx: VarContext, targetKind?: strin
     if (!/[<>=!]=|&&|\|\||<(?!<)|>(?!>)/.test(cleaned)) {
       return `_u32(${py})`;
     }
+  } else if (targetKind === 'char') {
+    return `_to_char(${py})`;
   } else if (isPureInt32Arith(t, ctx)) {
     return `_i32(${py})`;
   }
@@ -774,7 +852,13 @@ function translateExpr(expr: string, ctx: VarContext): string {
 
   // std:: functions & constants
   s = s.replace(/\bstd::gcd\b/g, 'math.gcd');
-  s = s.replace(/\bgcd\s*\(/g, 'math.gcd(');
+  s = s.replace(/\bstd::lcm\b/g, 'math.lcm');
+  if (!ctx.userFuncs.has('gcd')) {
+    s = s.replace(/(?<!\.)\bgcd\s*\(/g, 'math.gcd(');
+  }
+  if (!ctx.userFuncs.has('lcm')) {
+    s = s.replace(/(?<!\.)\blcm\s*\(/g, 'math.lcm(');
+  }
   s = s.replace(/\bstd::/g, '');
   s = s.replace(/\bINT_MAX\b/g, '2147483647');
   s = s.replace(/\bINT_MIN\b/g, '-2147483648');
@@ -786,6 +870,9 @@ function translateExpr(expr: string, ctx: VarContext): string {
   s = s.replace(/\bfalse\b/g, 'False');
   s = s.replace(/\btolower\s*\(/g, '_tolower(');
   s = s.replace(/\btoupper\s*\(/g, '_toupper(');
+  s = s.replace(/\bto_string\s*\(/g, 'str(');
+  s = s.replace(/\*([a-zA-Z_]\w*)\.begin\(\)/g, '$1.min_val()');
+  s = s.replace(/\*([a-zA-Z_]\w*)\.rbegin\(\)/g, '$1.max_val()');
   s = s.replace(/\bnext_permutation\s*\(([^,]+)\.begin\(\)\s*,\s*\1\.end\(\)\s*\)/g, '_next_permutation($1)');
   s = s.replace(/\breverse\s*\(([^,]+)\.begin\(\)\s*,\s*\1\.end\(\)\s*\)/g, '$1.reverse()');
   s = s.replace(/\bmax_element\s*\(([^,]+)\.begin\(\)\s*,\s*\1\.end\(\)\s*\)/g, 'max($1)');
@@ -871,11 +958,34 @@ function translateExpr(expr: string, ctx: VarContext): string {
     }
   }
 
-  // Handle x++ / ++x inside expressions (rare outside for/statements, e.g. a[l++])
-  s = s.replace(/\b([a-zA-Z_]\w*)\+\+/g, (m, v) => {
-    void m;
-    return v; // handled cleanly at statement level or loop level
-  });
+  // Remaining embedded x++ / ++x fallback (main pre/post increments are extracted at statement level)
+
+  // Wrap char variables and string[idx] accesses in ord(...) when used in arithmetic
+  const charVars = Array.from(ctx.types.entries())
+    .filter(([, tp]) => tp === 'char')
+    .map(([name]) => name);
+  const strVars = Array.from(ctx.types.entries())
+    .filter(([, tp]) => tp === 'string')
+    .map(([name]) => name);
+  const escapeRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const charTermPatterns: string[] = [];
+  if (charVars.length > 0) {
+    charTermPatterns.push(`\\b(?:${charVars.map(escapeRe).join('|')})\\b(?!\\s*\\[|\\s*\\()`);
+  }
+  if (strVars.length > 0) {
+    charTermPatterns.push(`\\b(?:${strVars.map(escapeRe).join('|')})\\[[^\\]]+\\]`);
+  }
+  if (charTermPatterns.length > 0) {
+    const termRe = new RegExp(`(?<!ord\\()(?<!\\.)(${charTermPatterns.join('|')})`, 'g');
+    s = s.replace(termRe, (match, _g1, offset) => {
+      const before = s.slice(Math.max(0, offset - 4), offset);
+      const after = s.slice(offset + match.length, offset + match.length + 4);
+      if (/(?:[+\-*%&|^]|<<|>>|\/(?!\/))\s*$/.test(before) || /^\s*(?:[+\-*%&|^]|<<|>>|\/(?!\/))/.test(after)) {
+        return `ord(${match})`;
+      }
+      return match;
+    });
+  }
 
   // Integer division / in C++ -> _cdiv(a, b) when not inside string
   // Simple safe replacement for a / b -> _cdiv(a, b) only for simple binary division when clearly integer or general numeric
@@ -888,7 +998,7 @@ function translateExpr(expr: string, ctx: VarContext): string {
     const lit = charLiterals[Number(idxStr)];
     const before = s.slice(Math.max(0, offset - 4), offset);
     const after = s.slice(offset + _m.length, offset + _m.length + 4);
-    if (/[+\-*/%<>]\s*$/.test(before) || /^\s*[+\-*/%<>]/.test(after)) {
+    if (/(?:[+\-*%&|^]|<<|>>)\s*$/.test(before) || /^\s*(?:[+\-*%&|^]|<<|>>)/.test(after)) {
       return `ord(${lit})`;
     }
     return lit;
@@ -916,7 +1026,7 @@ function rewriteSlashDiv(expr: string, ctx: VarContext): string {
         else if (ch === '(' || ch === '[') {
           if (depth === 0) break;
           depth--;
-        } else if (depth === 0 && /[+\-*/%=<>,(:]/.test(ch)) {
+        } else if (depth === 0 && /[+\-=<>,(:?&|^]/.test(ch)) {
           break;
         }
         li--;
@@ -1088,7 +1198,7 @@ function translateVarDecl(stmt: string, ctx: VarContext, ind: string): string[] 
   while (idx < clean.length) {
     // skip modifiers / type tokens and <...>
     while (idx < clean.length && /\s/.test(clean[idx])) idx++;
-    const wordMatch = clean.slice(idx).match(/^(?:const|unsigned|signed|static|inline|long|short|int|double|float|char|bool|void|auto|string|vector|pair|map|unordered_map|set|unordered_set|multiset|priority_queue|queue|stack|deque|stringstream|function|ifstream|ofstream|ll|ull|ld|size_t|int64_t|uint64_t)\b/);
+    const wordMatch = clean.slice(idx).match(/^(?:const|unsigned|signed|static|inline|long|short|int|double|float|char|bool|void|auto|string|vector|pair|map|unordered_map|set|unordered_set|multiset|priority_queue|queue|stack|deque|stringstream|function|ifstream|ofstream|ll|ull|ld|size_t|int64_t|uint64_t|int32_t|uint32_t)\b/);
     if (wordMatch) {
       idx += wordMatch[0].length;
       if (clean[idx] === '<') {
@@ -1132,24 +1242,51 @@ function translateVarDecl(stmt: string, ctx: VarContext, ind: string): string[] 
     const sbMatch = d.match(/^\[([^\]]+)\]\s*=\s*(.+)$/);
     if (sbMatch) {
       const vars = sbMatch[1].split(',').map((v) => v.trim());
-      vars.forEach((v) => ctx.types.set(v, 'int'));
+      vars.forEach((v) => {
+        ctx.types.set(v, 'int');
+        ctx.locals?.add(v);
+      });
       lines.push(`${ind}${vars.join(', ')} = ${translateExpr(sbMatch[2], ctx)}`);
       continue;
     }
 
     // Lambda declaration: auto fn = [&](...) { ... }
-    const lamMatch = d.match(/^([a-zA-Z_]\w*)\s*=\s*\[[^\]]*\]\s*\(([^)]*)\)\s*(?:->\s*[^{]+)?\{([\s\S]*)\}$/);
+    const lamMatch = d.match(/^([a-zA-Z_]\w*)\s*=\s*\[[^\]]*\]\s*\(([^)]*)\)\s*(?:->\s*([^{]+))?\{([\s\S]*)\}$/);
     if (lamMatch) {
       const fnName = lamMatch[1];
+      const lamRetRaw = lamMatch[3]?.trim() || '';
       const paramsRaw = splitTopLevel(lamMatch[2], ',');
+      const lamCtx: VarContext = {
+        types: new Map(ctx.types),
+        structs: ctx.structs,
+        structFields: ctx.structFields,
+        funcReturns: ctx.funcReturns,
+        userFuncs: ctx.userFuncs,
+        globals: ctx.globals,
+        locals: new Set(),
+      };
       const params = paramsRaw.map((p) => {
-        const cleanP = p.replace(/&/g, '').trim();
+        const cleanP = p.replace(/&/g, ' ').trim();
         const toks = cleanP.split(/\s+/);
         const pName = toks[toks.length - 1];
-        ctx.types.set(pName, inferType(toks.slice(0, -1).join(' ')));
+        lamCtx.types.set(pName, inferType(toks.slice(0, -1).join(' '), ctx.structs));
         return pName;
       });
-      const bodyLines = translateBlock(lamMatch[3], ctx, ind + '    ');
+      // Infer return kind from function<Ret(...)>, explicit trailing return, or body
+      const fnTypeMatch = typePart.match(/^function<\s*([^(]+)\(/);
+      let lamRetKind = lamRetRaw
+        ? inferType(lamRetRaw, ctx.structs)
+        : fnTypeMatch
+          ? inferType(fnTypeMatch[1], ctx.structs)
+          : '';
+      if (!lamRetKind && /\b(?:long\s+long|ll|int64_t|uint64_t)\b/.test(lamMatch[4])) {
+        lamRetKind = 'int64';
+      }
+      if (lamRetKind) {
+        lamCtx.currentReturnKind = lamRetKind;
+        ctx.funcReturns.set(fnName, lamRetKind);
+      }
+      const bodyLines = translateBlock(lamMatch[4], lamCtx, ind + '    ');
       lines.push(`${ind}def ${fnName}(${params.join(', ')}):`);
       lines.push(...(bodyLines.length ? bodyLines : [`${ind}    pass`]));
       continue;
@@ -1169,6 +1306,7 @@ function translateVarDecl(stmt: string, ctx: VarContext, ind: string): string[] 
               ? 'vector_str'
               : 'vector';
       ctx.types.set(vName, arrKind);
+      ctx.locals?.add(vName);
       if (arrMatch[3] !== undefined) {
         lines.push(`${ind}${vName} = [${arrMatch[3]}]`);
       } else {
@@ -1184,16 +1322,19 @@ function translateVarDecl(stmt: string, ctx: VarContext, ind: string): string[] 
       const args = splitTopLevel(ctorMatch[2], ',');
       if (isVectorKind(baseKind)) {
         ctx.types.set(vName, baseKind);
+        ctx.locals?.add(vName);
         if (args.length === 1) {
           const structMatch = typePart.match(/^vector<\s*([a-zA-Z_]\w*)\s*>$/);
           const innerDefault =
             structMatch && ctx.structs.has(structMatch[1])
               ? `${structMatch[1]}()`
-              : typePart.includes('vector<vector') || typePart.includes('vector<pair')
+              : typePart.includes('vector<vector')
                 ? '[]'
-                : typePart.includes('string')
-                  ? '""'
-                  : '0';
+                : typePart.includes('vector<pair')
+                  ? '[0, 0]'
+                  : typePart.includes('string')
+                    ? '""'
+                    : '0';
           lines.push(`${ind}${vName} = _make_vec(${translateExpr(args[0], ctx)}, lambda: ${innerDefault})`
             .replace('lambda: 0', '0')
             .replace('lambda: ""', '""'));
@@ -1224,6 +1365,7 @@ function translateVarDecl(stmt: string, ctx: VarContext, ind: string): string[] 
       const vName = d.slice(0, eqIdx).trim();
       const valRaw = d.slice(eqIdx + 1).trim();
       ctx.types.set(vName, baseKind);
+      ctx.locals?.add(vName);
       if (valRaw.startsWith('{') && valRaw.endsWith('}')) {
         lines.push(`${ind}${vName} = [${translateExpr(valRaw.slice(1, -1), ctx)}]`);
       } else {
@@ -1236,14 +1378,16 @@ function translateVarDecl(stmt: string, ctx: VarContext, ind: string): string[] 
     // Plain uninitialized variable: `int n` or `map<int,int> cnt`
     const vName = d;
     ctx.types.set(vName, baseKind);
+    ctx.locals?.add(vName);
     if (isVectorKind(baseKind) || baseKind === 'stack') lines.push(`${ind}${vName} = _CppVec()`);
-    else if (baseKind === 'queue') lines.push(`${ind}${vName} = collections.deque()`);
+    else if (baseKind === 'queue') lines.push(`${ind}${vName} = _CppQueue()`);
     else if (baseKind === 'map') lines.push(`${ind}${vName} = _CppMap()`);
     else if (baseKind === 'set') lines.push(`${ind}${vName} = _CppSet()`);
     else if (baseKind === 'multiset') lines.push(`${ind}${vName} = _Multiset()`);
     else if (baseKind === 'min_pq') lines.push(`${ind}${vName} = _MinPQ()`);
     else if (baseKind === 'max_pq') lines.push(`${ind}${vName} = _MaxPQ()`);
     else if (baseKind === 'string') lines.push(`${ind}${vName} = ""`);
+    else if (baseKind === 'pair') lines.push(`${ind}${vName} = [0, 0]`);
     else if (baseKind === 'float') lines.push(`${ind}${vName} = 0.0`);
     else if (baseKind === 'bool') lines.push(`${ind}${vName} = False`);
     else if (ctx.structs.has(typePart)) {
@@ -1271,18 +1415,69 @@ function translateVecArg(arg: string, ctx: VarContext): string {
 function translateReadTarget(target: string, ctx: VarContext, ind: string): string {
   const t = target.trim();
   const baseName = t.split('[')[0].split('.')[0];
-  const tp = ctx.types.get(baseName) || 'int';
+  let tp = ctx.types.get(baseName) || 'int';
+  if (t.includes('.')) {
+    const fieldName = t.split('.').pop()!;
+    const structType = tp.startsWith('struct:') ? tp.slice(7) : '';
+    const fieldMap = structType ? ctx.structFields.get(structType) : undefined;
+    if (fieldMap?.has(fieldName)) {
+      tp = fieldMap.get(fieldName)!;
+    } else if (tp === 'int' && ctx.structFields.size > 0) {
+      for (const fm of ctx.structFields.values()) {
+        if (fm.has(fieldName)) {
+          tp = fm.get(fieldName)!;
+          break;
+        }
+      }
+    }
+  }
   let reader = '_cin.read_int()';
   if (tp === 'string' || tp === 'vector_str') reader = '_cin.read_str()';
   else if (tp === 'float') reader = '_cin.read_float()';
   else if (tp === 'char') reader = '_cin.read_str()';
   else if (tp === 'int32' || tp === 'vector_i32') reader = '_cin.read_i32()';
   else if (tp === 'uint32') reader = '_cin.read_u32()';
-  // If struct field like x.name / x.score
   if (t.includes('.name')) reader = '_cin.read_str()';
-  if (t.includes('.score')) reader = '_cin.read_int()';
+  if (t.includes('.score')) reader = '_cin.read_i32()';
   const pyTarget = translateExpr(t, ctx);
   return `${ind}${pyTarget} = ${reader}`;
+}
+
+function makeIncDecLine(rawLval: string, delta: 1 | -1, ctx: VarContext, ind: string): string {
+  const baseName = rawLval.split('[')[0].split('.')[0];
+  const pyV = translateExpr(rawLval, ctx);
+  const tp = ctx.types.get(baseName);
+  const op = delta === 1 ? '+' : '-';
+  if (tp === 'int32' || (rawLval.includes('[') && tp === 'vector_i32')) {
+    return `${ind}${pyV} = _i32(${pyV} ${op} 1)`;
+  }
+  return `${ind}${pyV} ${op}= 1`;
+}
+
+function extractEmbeddedIncDec(
+  raw: string,
+  ctx: VarContext,
+  ind: string
+): { cleaned: string; preLines: string[]; postLines: string[] } {
+  const lvalReStr = '[a-zA-Z_]\\w*(?:\\.[a-zA-Z_]\\w*|\\[[^\\[\\]]*(?:\\[[^\\[\\]]*\\][^\\[\\]]*)*\\])*';
+  const re = new RegExp(
+    `"(?:\\\\.|[^"\\\\])*"|'(?:\\\\.|[^'\\\\])'|(\\+\\+|--)\\s*(${lvalReStr})|(${lvalReStr})\\s*(\\+\\+|--)`,
+    'g'
+  );
+  const preLines: string[] = [];
+  const postLines: string[] = [];
+  const cleaned = raw.replace(re, (match, preOp, preVar, postVar, postOp) => {
+    if (preOp && preVar) {
+      preLines.push(makeIncDecLine(preVar, preOp === '++' ? 1 : -1, ctx, ind));
+      return preVar;
+    }
+    if (postVar && postOp) {
+      postLines.push(makeIncDecLine(postVar, postOp === '++' ? 1 : -1, ctx, ind));
+      return postVar;
+    }
+    return match;
+  });
+  return { cleaned, preLines, postLines };
 }
 
 function translateStatement(stmt: string, ctx: VarContext, ind: string): string[] {
@@ -1345,8 +1540,9 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
       return [...readLines, `${ind}if ${vars[0]} is not None:`, ...(bodyLines.length ? bodyLines : [`${ind}    pass`])];
     }
 
+    const incExt = extractEmbeddedIncDec(condRaw, ctx, ind);
     const bodyLines = translateStatement(rest, ctx, ind + '    ');
-    return [`${ind}if ${translateExpr(condRaw, ctx)}:`, ...(bodyLines.length ? bodyLines : [`${ind}    pass`])];
+    return [...incExt.preLines, `${ind}if ${translateExpr(incExt.cleaned, ctx)}:`, ...(bodyLines.length ? bodyLines : [`${ind}    pass`])];
   }
 
   // `else if (...)` or `else ...`
@@ -1434,7 +1630,7 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
         vars.forEach((v) => ctx.types.set(v, 'int'));
         targetVar = vars.join(', ');
       } else {
-        const toks = left.replace(/&/g, '').trim().split(/\s+/);
+        const toks = left.replace(/&/g, ' ').trim().split(/\s+/);
         targetVar = toks[toks.length - 1];
         if (left.includes('char')) ctx.types.set(targetVar, 'char');
         else if (left.includes('string')) ctx.types.set(targetVar, 'string');
@@ -1442,6 +1638,7 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
         else if (/\b(?:int|int32_t|short)\b/.test(left)) ctx.types.set(targetVar, 'int32');
         else if (rType === 'vector_i32') ctx.types.set(targetVar, 'int32');
         else if (rType === 'vector_i64') ctx.types.set(targetVar, 'int64');
+        else if (/\bvector<\s*([a-zA-Z_]\w*)\s*>/.test(right)) ctx.types.set(targetVar, 'int');
         else ctx.types.set(targetVar, 'int');
       }
 
@@ -1461,6 +1658,27 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
         }
         const assignLines = readVars.map((rv) => translateReadTarget(rv, ctx, ind + '    '));
         return [`${ind}for ${targetVar} in ${rightName}:`, ...assignLines];
+      }
+
+      if (!sb && left.includes('&') && rType === 'string' && /^[a-zA-Z_]\w*$/.test(right.trim())) {
+        const strName = right.trim();
+        ctx.loopCounter = ctx.loopCounter || { n: 0 };
+        const uid = ctx.loopCounter.n++;
+        const listVar = `_mut_str_${uid}`;
+        const idxVar = `_mut_idx_${uid}`;
+        const bodyLines = translateStatement(bodyRaw, ctx, ind + '            ');
+        return [
+          `${ind}${listVar} = list(${strName})`,
+          `${ind}try:`,
+          `${ind}    for ${idxVar} in range(len(${listVar})):`,
+          `${ind}        ${targetVar} = ${listVar}[${idxVar}]`,
+          `${ind}        try:`,
+          ...(bodyLines.length ? bodyLines : [`${ind}            pass`]),
+          `${ind}        finally:`,
+          `${ind}            ${listVar}[${idxVar}] = ${targetVar}`,
+          `${ind}finally:`,
+          `${ind}    ${strName} = "".join(${listVar})`,
+        ];
       }
 
       const bodyLines = translateStatement(bodyRaw, ctx, ind + '    ');
@@ -1511,7 +1729,44 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
   if (/^return\b/.test(trimmed)) {
     const val = trimmed.replace(/;$/, '').slice(6).trim();
     if (!val) return [`${ind}return`];
-    return [`${ind}return ${translateValueExpr(val, ctx)}`];
+    // Expand `return cond ? a : (target = rhs)` into `if/else` because Python forbids subscript assignment in expressions
+    let dP = 0, dB = 0, qPos = -1, cPos = -1;
+    for (let k = 0; k < val.length; k++) {
+      const ch = val[k];
+      if (ch === '(') dP++;
+      else if (ch === ')') dP--;
+      else if (ch === '[') dB++;
+      else if (ch === ']') dB--;
+      else if (dP === 0 && dB === 0) {
+        if (ch === '?' && qPos === -1) qPos = k;
+        else if (ch === ':' && qPos !== -1 && cPos === -1) cPos = k;
+      }
+    }
+    if (qPos !== -1 && cPos !== -1) {
+      const tRaw = val.slice(qPos + 1, cPos).trim();
+      const fRaw = val.slice(cPos + 1).trim();
+      const hasAssign = (s: string) => /(?:^|[^=!<>])=(?!=)/.test(s);
+      if (hasAssign(tRaw) || hasAssign(fRaw)) {
+        const condRaw = val.slice(0, qPos).trim();
+        const unwrapParen = (s: string) => (s.startsWith('(') && s.endsWith(')') ? s.slice(1, -1).trim() : s);
+        const expandBranch = (bRaw: string, bInd: string): string[] => {
+          const cleanB = unwrapParen(bRaw);
+          if (hasAssign(cleanB)) {
+            const assignLines = translateStatement(cleanB + ';', ctx, bInd);
+            const lhsOnly = cleanB.split('=')[0].trim();
+            return [...assignLines, `${bInd}return ${translateExpr(lhsOnly, ctx)}`];
+          }
+          return [`${bInd}return ${translateValueExpr(cleanB, ctx, ctx.currentReturnKind)}`];
+        };
+        return [
+          `${ind}if ${translateExpr(condRaw, ctx)}:`,
+          ...expandBranch(tRaw, ind + '    '),
+          `${ind}else:`,
+          ...expandBranch(fRaw, ind + '    '),
+        ];
+      }
+    }
+    return [`${ind}return ${translateValueExpr(val, ctx, ctx.currentReturnKind)}`];
   }
 
   if (trimmed === 'break;') return [`${ind}break`];
@@ -1532,7 +1787,7 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
   const sortLambda = noSemi.match(/^sort\s*\(\s*([a-zA-Z_]\w*)\.begin\(\)\s*,\s*\1\.end\(\)\s*,\s*\[[^\]]*\]\s*\(([^)]*)\)\s*\{([\s\S]*)\}\s*\)$/);
   if (sortLambda) {
     const [, arrName, paramsRaw, body] = sortLambda;
-    const params = splitTopLevel(paramsRaw, ',').map((p) => p.replace(/&/g, '').trim().split(/\s+/).pop()!);
+    const params = splitTopLevel(paramsRaw, ',').map((p) => p.replace(/&/g, ' ').trim().split(/\s+/).pop()!);
     const bodyLines = translateBlock(body, ctx, ind + '        ');
     return [
       `${ind}def _cmp_${arrName}(${params.join(', ')}):`,
@@ -1554,7 +1809,7 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
   }
 
   // `swap(a, b)`
-  const swapMatch = noSemi.match(/^swap\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)$/);
+  const swapMatch = noSemi.match(/^(?:std::)?swap\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)$/);
   if (swapMatch) {
     const a = translateExpr(swapMatch[1], ctx);
     const b = translateExpr(swapMatch[2], ctx);
@@ -1567,48 +1822,45 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
     return [`${ind}${msErase[1]}.erase_val(${translateExpr(msErase[2], ctx)})`];
   }
 
-  // `x++`, `++x`, `x--`, `--x`
-  const incMatch = noSemi.match(/^(?:\+\+([a-zA-Z_]\w*(?:\[[^\]]+\])?)|([a-zA-Z_]\w*(?:\[[^\]]+\])?)\+\+)$/);
+  // Standalone `x++`, `++x`, `x--`, `--x` (supports nested brackets like `cnt[a[r]]++`)
+  const lvalExact = '[a-zA-Z_]\\w*(?:\\.[a-zA-Z_]\\w*|\\[[^\\[\\]]*(?:\\[[^\\[\\]]*\\][^\\[\\]]*)*\\])*';
+  const incMatch = noSemi.match(new RegExp(`^(?:\\+\\+(${lvalExact})|(${lvalExact})\\+\\+)$`));
   if (incMatch) {
     const rawV = incMatch[1] || incMatch[2];
-    const baseName = rawV.split('[')[0];
-    const v = translateExpr(rawV, ctx);
-    if (ctx.types.get(baseName) === 'int32' || (!rawV.includes('[') && ctx.types.get(baseName) === undefined)) {
-      if (ctx.types.get(baseName) === 'int32') return [`${ind}${v} = _i32(${v} + 1)`];
-    }
-    return [`${ind}${v} += 1`];
+    return [makeIncDecLine(rawV, 1, ctx, ind)];
   }
-  const decMatch = noSemi.match(/^(?:--([a-zA-Z_]\w*(?:\[[^\]]+\])?)|([a-zA-Z_]\w*(?:\[[^\]]+\])?)--)$/);
+  const decMatch = noSemi.match(new RegExp(`^(?:--(${lvalExact})|(${lvalExact})--)$`));
   if (decMatch) {
     const rawV = decMatch[1] || decMatch[2];
-    const baseName = rawV.split('[')[0];
-    const v = translateExpr(rawV, ctx);
-    if (ctx.types.get(baseName) === 'int32') return [`${ind}${v} = _i32(${v} - 1)`];
-    return [`${ind}${v} -= 1`];
+    return [makeIncDecLine(rawV, -1, ctx, ind)];
   }
 
+  // Extract any embedded `l++` / `--x` inside assignment or expression statements
+  const incExt = extractEmbeddedIncDec(noSemi, ctx, ind);
+  const workStmt = incExt.cleaned;
+
   // `a /= b` -> `a = _cdiv(a, b)` when int
-  const divAssign = noSemi.match(/^([a-zA-Z_]\w*(?:\[[^\]]+\])?)\s*\/=\s*(.+)$/);
+  const divAssign = workStmt.match(/^([a-zA-Z_]\w*(?:\[[^\]]+\])?)\s*\/=\s*(.+)$/);
   if (divAssign) {
     const lhs = translateExpr(divAssign[1], ctx);
     const rhs = translateExpr(divAssign[2], ctx);
-    return [`${ind}${lhs} = _cdiv(${lhs}, ${rhs})`];
+    return [...incExt.preLines, `${ind}${lhs} = _cdiv(${lhs}, ${rhs})`, ...incExt.postLines];
   }
 
   // `a %= b`
-  const modAssign = noSemi.match(/^([a-zA-Z_]\w*(?:\[[^\]]+\])?)\s*%=\s*(.+)$/);
+  const modAssign = workStmt.match(/^([a-zA-Z_]\w*(?:\[[^\]]+\])?)\s*%=\s*(.+)$/);
   if (modAssign) {
     const lhs = translateExpr(modAssign[1], ctx);
     const rhs = translateExpr(modAssign[2], ctx);
-    return [`${ind}${lhs} = _cmod(${lhs}, ${rhs})`];
+    return [...incExt.preLines, `${ind}${lhs} = _cmod(${lhs}, ${rhs})`, ...incExt.postLines];
   }
 
-  // Top-level assignment (`lhs = rhs`, `lhs += rhs`, `lhs -= rhs`, `lhs *= rhs`)
+  // Top-level assignment (`lhs = rhs`, `+=`, `-=`, `*=`, `^=`, `&=`, `|=`, `<<=`, `>>=`)
   {
     let dP = 0, dB = 0, dC = 0;
     let inStr: string | null = null;
-    for (let idx = 0; idx < noSemi.length; idx++) {
-      const ch = noSemi[idx];
+    for (let idx = 0; idx < workStmt.length; idx++) {
+      const ch = workStmt[idx];
       if (inStr) {
         if (ch === '\\') { idx++; continue; }
         if (ch === inStr) inStr = null;
@@ -1622,38 +1874,51 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
       else if (ch === '{') dC++;
       else if (ch === '}') dC--;
       else if (dP === 0 && dB === 0 && dC === 0) {
-        if ((ch === '+' || ch === '-' || ch === '*') && noSemi[idx + 1] === '=') {
-          const lhs = noSemi.slice(0, idx).trim();
-          const rhs = noSemi.slice(idx + 2).trim();
+        if ((workStmt.slice(idx, idx + 3) === '<<=' || workStmt.slice(idx, idx + 3) === '>>=')) {
+          const op = workStmt.slice(idx, idx + 3);
+          const lhs = workStmt.slice(0, idx).trim();
+          const rhs = workStmt.slice(idx + 3).trim();
+          if (lhs && rhs) {
+            const lhsPy = translateExpr(lhs, ctx);
+            const rhsPy = translateValueExpr(rhs, ctx);
+            return [...incExt.preLines, `${ind}${lhsPy} ${op} ${rhsPy}`, ...incExt.postLines];
+          }
+        }
+        if ((ch === '+' || ch === '-' || ch === '*' || ch === '^' || ch === '&' || ch === '|') && workStmt[idx + 1] === '=') {
+          const lhs = workStmt.slice(0, idx).trim();
+          const rhs = workStmt.slice(idx + 2).trim();
           if (lhs && rhs) {
             const baseLhs = lhs.split('[')[0].split('.')[0];
             const lhsKind = ctx.types.get(baseLhs);
             const lhsPy = translateExpr(lhs, ctx);
             const rhsPy = translateValueExpr(rhs, ctx);
             if (lhsKind === 'int32' || (lhs.includes('[') && lhsKind === 'vector_i32')) {
-              return [`${ind}${lhsPy} = _i32(${lhsPy} ${ch} (${rhsPy}))`];
+              return [...incExt.preLines, `${ind}${lhsPy} = _i32(${lhsPy} ${ch} (${rhsPy}))`, ...incExt.postLines];
             }
             if (lhsKind === 'uint32') {
-              return [`${ind}${lhsPy} = _u32(${lhsPy} ${ch} (${rhsPy}))`];
+              return [...incExt.preLines, `${ind}${lhsPy} = _u32(${lhsPy} ${ch} (${rhsPy}))`, ...incExt.postLines];
             }
-            return [`${ind}${lhsPy} ${ch}= ${rhsPy}`];
+            return [...incExt.preLines, `${ind}${lhsPy} ${ch}= ${rhsPy}`, ...incExt.postLines];
           }
         }
         if (
           ch === '=' &&
-          noSemi[idx + 1] !== '=' &&
-          noSemi[idx - 1] !== '=' &&
-          noSemi[idx - 1] !== '!' &&
-          noSemi[idx - 1] !== '<' &&
-          noSemi[idx - 1] !== '>' &&
-          noSemi[idx - 1] !== '+' &&
-          noSemi[idx - 1] !== '-' &&
-          noSemi[idx - 1] !== '*' &&
-          noSemi[idx - 1] !== '/' &&
-          noSemi[idx - 1] !== '%'
+          workStmt[idx + 1] !== '=' &&
+          workStmt[idx - 1] !== '=' &&
+          workStmt[idx - 1] !== '!' &&
+          workStmt[idx - 1] !== '<' &&
+          workStmt[idx - 1] !== '>' &&
+          workStmt[idx - 1] !== '+' &&
+          workStmt[idx - 1] !== '-' &&
+          workStmt[idx - 1] !== '*' &&
+          workStmt[idx - 1] !== '/' &&
+          workStmt[idx - 1] !== '%' &&
+          workStmt[idx - 1] !== '^' &&
+          workStmt[idx - 1] !== '&' &&
+          workStmt[idx - 1] !== '|'
         ) {
-          const lhs = noSemi.slice(0, idx).trim();
-          const rhs = noSemi.slice(idx + 1).trim();
+          const lhs = workStmt.slice(0, idx).trim();
+          const rhs = workStmt.slice(idx + 1).trim();
           if (lhs && rhs) {
             const baseLhs = lhs.split('[')[0].split('.')[0];
             const lhsKind = ctx.types.get(baseLhs);
@@ -1662,10 +1927,12 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
                 ? 'int32'
                 : lhsKind === 'uint32'
                   ? 'uint32'
-                  : undefined;
+                  : lhsKind === 'char'
+                    ? 'char'
+                    : undefined;
             const lhsPy = translateExpr(lhs, ctx);
             const rhsPy = translateValueExpr(rhs, ctx, targetKind);
-            return [`${ind}${lhsPy} = ${rhsPy}`];
+            return [...incExt.preLines, `${ind}${lhsPy} = ${rhsPy}`, ...incExt.postLines];
           }
         }
       }
@@ -1673,7 +1940,7 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
   }
 
   // Fallback expression statement
-  return [`${ind}${translateExpr(noSemi, ctx)}`];
+  return [...incExt.preLines, `${ind}${translateExpr(workStmt, ctx)}`, ...incExt.postLines];
 }
 
 function splitTopLevelCout(str: string): string[] {
@@ -1730,6 +1997,10 @@ export function compileCpp17(source: string): CompileResult {
   const ctx: VarContext = {
     types: new Map(),
     structs: new Map(),
+    structFields: new Map(),
+    funcReturns: new Map(),
+    userFuncs: new Set(),
+    globals: new Set(),
   };
 
   // Detect security / selftest patterns cleanly while still preserving full C++ compilation
@@ -1748,21 +2019,35 @@ export function compileCpp17(source: string): CompileResult {
       const sName = stripped.slice(i + 7, openB).trim();
       const sBody = stripped.slice(openB + 1, closeB);
       const fields: string[] = [];
+      const fieldTypes = new Map<string, string>();
       for (const fLine of sBody.split(';')) {
         const ft = fLine.trim();
         if (!ft || ft.includes('operator') || ft.includes('(')) continue;
-        const toks = ft.split(/\s+/);
-        if (toks.length >= 2) {
-          for (const fn of toks.slice(1).join(' ').split(',')) {
-            fields.push(fn.trim());
+        const typeMatch = ft.match(/^((?:(?:const|unsigned|signed|static|long|short|int|double|float|char|bool|string|auto|ll|ull|ld|size_t|int64_t|uint64_t|int32_t|uint32_t)\s+)+)(.+)$/);
+        if (typeMatch) {
+          const fieldKind = inferType(typeMatch[1]);
+          for (const fn of typeMatch[2].split(',')) {
+            const cleanField = fn.trim();
+            if (cleanField) {
+              fields.push(cleanField);
+              fieldTypes.set(cleanField, fieldKind);
+            }
           }
         }
       }
       ctx.structs.set(sName, fields);
+      ctx.structFields.set(sName, fieldTypes);
       pyOut.push(`class ${sName}:`);
-      pyOut.push(`    def __init__(self, ${fields.map((f) => `${f}=0`).join(', ')}):`);
+      pyOut.push(`    def __init__(self, ${fields.map((f) => `${f}=${fieldTypes.get(f) === 'string' ? '""' : '0'}`).join(', ')}):`);
       for (const f of fields) pyOut.push(`        self.${f} = ${f}`);
       if (fields.length === 0) pyOut.push(`        pass`);
+      else {
+        const tup = `(${fields.map((f) => `self.${f}`).join(', ')})`;
+        const otherTup = `(${fields.map((f) => `other.${f}`).join(', ')})`;
+        pyOut.push(`    def __lt__(self, other): return ${tup} < ${otherTup}`);
+        pyOut.push(`    def __eq__(self, other): return isinstance(other, ${sName}) and ${tup} == ${otherTup}`);
+        pyOut.push(`    def __hash__(self): return hash(${tup})`);
+      }
       // Check semicolon after }
       i = closeB + 1;
       if (stripped[i] === ';') i++;
@@ -1802,7 +2087,11 @@ export function compileCpp17(source: string): CompileResult {
 
     if (foundType === 'semi') {
       const stmt = stripped.slice(i, j + 1);
+      const beforeKeys = new Set(ctx.types.keys());
       pyOut.push(...translateStatement(stmt, ctx, ''));
+      for (const k of ctx.types.keys()) {
+        if (!beforeKeys.has(k)) ctx.globals.add(k);
+      }
       i = j + 1;
       continue;
     }
@@ -1817,28 +2106,45 @@ export function compileCpp17(source: string): CompileResult {
     const pClose = sig.lastIndexOf(')');
     const fnHead = sig.slice(0, pOpen).trim().split(/\s+/);
     const fnName = fnHead[fnHead.length - 1];
+    const fnRetType = fnHead.slice(0, -1).join(' ');
+    const fnRetKind = fnRetType && fnRetType !== 'void' ? inferType(fnRetType, ctx.structs) : undefined;
+    if (fnName && fnName !== 'main') {
+      ctx.userFuncs.add(fnName);
+      if (fnRetKind) ctx.funcReturns.set(fnName, fnRetKind);
+    }
     const paramsStr = sig.slice(pOpen + 1, pClose).trim();
+    const fnLocals = new Set<string>();
     const fnCtx: VarContext = {
       types: new Map(ctx.types),
       structs: ctx.structs,
+      structFields: ctx.structFields,
+      funcReturns: ctx.funcReturns,
+      userFuncs: ctx.userFuncs,
+      globals: ctx.globals,
+      locals: fnLocals,
+      currentReturnKind: fnRetKind,
     };
     const params = paramsStr
       ? splitTopLevel(paramsStr, ',').map((p) => {
-          const cleanP = p.replace(/&/g, '').trim();
+          const cleanP = p.replace(/&/g, ' ').trim();
           const toks = cleanP.split(/\s+/);
           const pName = toks[toks.length - 1];
-          fnCtx.types.set(pName, inferType(toks.slice(0, -1).join(' ')));
+          fnCtx.types.set(pName, inferType(toks.slice(0, -1).join(' '), ctx.structs));
           return pName;
         })
       : [];
 
     const fnBodyLines = translateBlock(body, fnCtx, '    ');
+    const fnGlobals = Array.from(ctx.globals).filter((g) => !params.includes(g) && !fnLocals.has(g));
+    const globalDecl = fnGlobals.length > 0 ? [`    global ${fnGlobals.join(', ')}`] : [];
+    const combinedBody = [...globalDecl, ...(fnBodyLines.length ? fnBodyLines : [`    pass`])];
+
     if (fnName === 'main') {
       pyOut.push(`def _cpp_main():`);
-      pyOut.push(...(fnBodyLines.length ? fnBodyLines : [`    pass`]));
+      pyOut.push(...combinedBody);
     } else {
       pyOut.push(`def ${fnName}(${params.join(', ')}):`);
-      pyOut.push(...(fnBodyLines.length ? fnBodyLines : [`    pass`]));
+      pyOut.push(...combinedBody);
     }
   }
 

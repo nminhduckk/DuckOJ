@@ -99,8 +99,8 @@ export function LoginPage() {
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: locale === 'vi' ? 'Học viên' : 'Student', email: 'student@duckoj.vn', pw: 'student123' },
-              { label: locale === 'vi' ? 'Kiểm duyệt' : 'Reviewer', email: 'reviewer@duckoj.vn', pw: 'reviewer123' },
-              { label: locale === 'vi' ? 'Quản trị' : 'Admin', email: 'admin@duckoj.vn', pw: 'admin123' },
+              { label: locale === 'vi' ? 'Kiểm duyệt viên' : 'Reviewer', email: 'reviewer@duckoj.vn', pw: 'reviewer123' },
+              { label: locale === 'vi' ? 'Quản trị viên' : 'Admin', email: 'admin@duckoj.vn', pw: 'admin123' },
             ].map((acc) => (
               <button
                 key={acc.label}
@@ -191,7 +191,7 @@ export function RegisterPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="ban@example.com"
+              placeholder="hocvien@example.com"
               className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
             />
           </div>
@@ -222,7 +222,7 @@ export function RegisterPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Nguyễn Văn A"
+              placeholder="Nguyễn Văn An"
               className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
             />
           </div>

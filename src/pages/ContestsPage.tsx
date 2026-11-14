@@ -82,8 +82,8 @@ export function ContestsPage() {
                       <Trophy className="w-3.5 h-3.5" />
                       <span>{ph.text}</span>
                     </span>
-                    <span className="text-slate-500 dark:text-slate-400 uppercase font-mono">
-                      {c.scoring} · +{c.penalty_minutes}m
+                    <span className="text-slate-500 dark:text-slate-400 font-mono">
+                      {c.scoring.toUpperCase()} · {locale === 'vi' ? `+${c.penalty_minutes} phút` : `+${c.penalty_minutes}m`}
                     </span>
                   </div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">{c.title}</h2>

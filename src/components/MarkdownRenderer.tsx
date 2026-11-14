@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
-import { Check, Copy, ExternalLink } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { ExternalLink } from 'lucide-react';
+import { HighlightedCodeBlock } from './HighlightedCodeBlock';
 
 const SANITIZE_SCHEMA = {
   ...defaultSchema,
@@ -43,39 +43,9 @@ const SANITIZE_SCHEMA = {
 };
 
 function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
-  const { locale } = useApp();
-  const [copied, setCopied] = useState(false);
   const text = String(children).replace(/\n$/, '');
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      // ignore clipboard errors
-    }
-  };
-
-  return (
-    <div className="my-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-950 text-slate-100 overflow-hidden">
-      <div className="flex items-center justify-between px-3.5 py-2 border-b border-slate-800 bg-slate-900/90 text-xs text-slate-400">
-        <span className="font-mono">{className ? className.replace('language-', '') : 'text'}</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          aria-label={locale === 'vi' ? 'Sao chép mã nguồn' : 'Copy code'}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium text-slate-200 hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0"
-        >
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-          <span>{copied ? (locale === 'vi' ? 'Đã chép' : 'Copied') : locale === 'vi' ? 'Sao chép' : 'Copy'}</span>
-        </button>
-      </div>
-      <pre className="p-4 overflow-x-auto text-sm leading-relaxed font-mono">
-        <code>{text}</code>
-      </pre>
-    </div>
-  );
+  const lang = className ? className.replace(/^language-/, '') : '';
+  return <HighlightedCodeBlock code={text} language={lang} className="my-4" />;
 }
 
 export function MarkdownRenderer({ content, className = '' }: { content: string; className?: string }) {

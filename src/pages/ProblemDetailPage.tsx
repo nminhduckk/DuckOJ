@@ -11,7 +11,14 @@ import {
   Unlock,
 } from 'lucide-react';
 import { apiFetch, ApiError, getAccessToken } from '../lib/api';
-import { formatVnDateTime } from '../lib/i18n';
+import {
+  formatChecker,
+  formatHintType,
+  formatLanguage,
+  formatTier,
+  formatTopic,
+  formatVnDateTime,
+} from '../lib/i18n';
 import { useApp } from '../context/AppContext';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { CodeEditor, DEFAULT_TEMPLATES } from '../components/CodeEditor';
@@ -76,7 +83,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
           .catch(() => {});
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Không thể tải bài tập.');
+      setError(err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể tải bài tập.' : 'Failed to load problem.');
     } finally {
       setLoading(false);
     }
@@ -269,7 +276,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
       });
       void streamSubmissionEvents(res.id);
     } catch (err) {
-      setSubmitErr(err instanceof ApiError ? err.message : 'Không thể nộp bài.');
+      setSubmitErr(err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể nộp bài.' : 'Failed to submit solution.');
       setSubmitting(false);
     }
   };
@@ -295,7 +302,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
         my_progress: { ...problem.my_progress, hint_level: res.hint_level },
       });
     } catch (err) {
-      setHintErr(err instanceof ApiError ? err.message : 'Chưa thể mở gợi ý lúc này.');
+      setHintErr(err instanceof ApiError ? err.message : locale === 'vi' ? 'Chưa thể mở gợi ý lúc này.' : 'Cannot unlock hint right now.');
     } finally {
       setUnlockingHint(false);
     }
@@ -318,7 +325,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
       setProblem({ ...problem, my_progress: res.progress });
       setExtMsg(locale === 'vi' ? 'Đã lưu trạng thái và ghi chú.' : 'Progress and notes saved.');
     } catch (err) {
-      setExtMsg(err instanceof ApiError ? err.message : 'Không thể lưu.');
+      setExtMsg(err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể lưu.' : 'Failed to save.');
     } finally {
       setSavingExt(false);
     }
@@ -345,7 +352,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
           : `Recorded attempt #${res.attempts}.`
       );
     } catch (err) {
-      setExtMsg(err instanceof ApiError ? err.message : 'Không thể ghi nhận.');
+      setExtMsg(err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể ghi nhận.' : 'Failed to record attempt.');
     }
   };
 
@@ -361,7 +368,9 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
   if (error || !problem) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16 text-center space-y-4">
-        <p className="text-rose-600 dark:text-rose-400">{error || 'Không tìm thấy bài tập.'}</p>
+        <p className="text-rose-600 dark:text-rose-400">
+          {error || (locale === 'vi' ? 'Không tìm thấy bài tập.' : 'Problem not found.')}
+        </p>
         <button
           type="button"
           onClick={() => navigate('/problems')}
@@ -395,8 +404,8 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                   ? 'Đang mở...'
                   : 'Unlocking...'
                 : locale === 'vi'
-                  ? `Mở gợi ý cấp ${problem.unlocked_hints.length + 1}`
-                  : `Unlock Hint ${problem.unlocked_hints.length + 1}`}
+                  ? `Mở gợi ý tầng ${problem.unlocked_hints.length + 1}`
+                  : `Unlock Hint Tier ${problem.unlocked_hints.length + 1}`}
             </span>
           </button>
         )}
@@ -416,8 +425,8 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
           </p>
           <p>
             {locale === 'vi'
-              ? 'Tầng 1 mở sau 1 lần nộp/thử hoặc sau 5 phút đọc đề. Các tầng cao hơn mở sau 2/3/5 lần thử và thời gian chờ 10 phút giữa mỗi tầng.'
-              : 'Tier 1 unlocks after 1 attempt or 5 minutes. Higher tiers require 2/3/5 attempts and a 10-minute cooldown.'}
+              ? 'Tầng 1 mở sau 1 lần nộp/thử hoặc sau 5 phút đọc đề. Các tầng cao hơn mở sau 2, 3 và 5 lần thử, cách nhau tối thiểu 3 phút giữa mỗi tầng.'
+              : 'Tier 1 unlocks after 1 attempt or 5 minutes of reading. Higher tiers require 2, 3, and 5 attempts with a 3-minute cooldown between tiers.'}
           </p>
         </div>
       ) : (
@@ -430,7 +439,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
               <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                 <HelpCircle className="w-3.5 h-3.5" />
                 <span>
-                  {locale === 'vi' ? `Gợi ý tầng ${h.level}` : `Hint Tier ${h.level}`} · {h.type}
+                  {locale === 'vi' ? `Gợi ý tầng ${h.level}` : `Hint Tier ${h.level}`} · {formatHintType(h.type, locale)}
                 </span>
               </p>
               <MarkdownRenderer content={h.text_md} />
@@ -471,9 +480,9 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                   {problem.source} {problem.source_id}
                 </span>
                 <span aria-hidden="true">·</span>
-                <span>Cấp {problem.level}</span>
+                <span>{locale === 'vi' ? `Cấp ${problem.level}` : `Level ${problem.level}`}</span>
                 <span aria-hidden="true">·</span>
-                <span>{problem.difficulty}</span>
+                <span>{formatTier(problem.difficulty, locale)}</span>
                 {problem.cf_rating && (
                   <>
                     <span aria-hidden="true">·</span>
@@ -485,7 +494,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                 {problem.title}
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                {problem.topics.map((tp) => tp.name_vi).join(' · ')}
+                {problem.topics.map((tp) => formatTopic(tp.slug, tp.name_vi, locale)).join(' · ')}
               </p>
             </div>
             <ProblemStatusLabel status={problem.my_progress.status} />
@@ -549,7 +558,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                   type="text"
                   value={extNotes}
                   onChange={(e) => setExtNotes(e.target.value)}
-                  placeholder={locale === 'vi' ? 'VD: Dùng hai con trỏ + sắp xếp...' : 'Notes...'}
+                  placeholder={locale === 'vi' ? 'Ví dụ: Dùng hai con trỏ + sắp xếp...' : 'e.g. Two pointers + sorting...'}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
                 />
               </div>
@@ -591,14 +600,16 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
             className="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>{contestSlug ? contestSlug : locale === 'vi' ? 'Kho bài tập' : 'Problems'}</span>
+            <span>
+              {contestSlug ? (locale === 'vi' ? 'Quay lại kỳ thi' : 'Back to contest') : locale === 'vi' ? 'Kho bài tập' : 'Problems'}
+            </span>
           </button>
           <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">/</span>
           <h1 className="text-lg font-bold text-slate-900 dark:text-white font-display">{problem.title}</h1>
           {contestSlug && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
               <Trophy className="w-3.5 h-3.5" />
-              <span>Contest: {contestSlug}</span>
+              <span>{locale === 'vi' ? `Kỳ thi: ${contestSlug}` : `Contest: ${contestSlug}`}</span>
             </span>
           )}
         </div>
@@ -624,7 +635,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
               [
                 { k: 'statement', label: locale === 'vi' ? 'Đề bài' : 'Statement' },
                 { k: 'submissions', label: locale === 'vi' ? `Bài nộp (${mySubs.length})` : `Submissions (${mySubs.length})` },
-                { k: 'hints', label: locale === 'vi' ? `Gợi ý (${problem.unlocked_hints.length}/${problem.total_hints})` : `Hints` },
+                { k: 'hints', label: locale === 'vi' ? `Gợi ý (${problem.unlocked_hints.length}/${problem.total_hints})` : `Hints (${problem.unlocked_hints.length}/${problem.total_hints})` },
               ] as const
             ).map((tab) => (
               <button
@@ -648,15 +659,19 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 pb-3 border-b border-slate-100 dark:border-slate-800 tabular-nums">
                   <span>{locale === 'vi' ? `Cấp ${problem.level}` : `Level ${problem.level}`}</span>
                   <span aria-hidden="true">·</span>
-                  <span>{problem.difficulty}</span>
+                  <span>{formatTier(problem.difficulty, locale)}</span>
                   <span aria-hidden="true">·</span>
                   <span>{problem.native.time_limit_ms} ms</span>
                   <span aria-hidden="true">·</span>
                   <span>{problem.native.memory_limit_mb} MB</span>
                   <span aria-hidden="true">·</span>
-                  <span>Checker: {problem.native.checker}</span>
+                  <span>
+                    {locale === 'vi' ? 'Kiểu chấm' : 'Checker'}: {formatChecker(problem.native.checker, locale)}
+                  </span>
                   <span aria-hidden="true">·</span>
-                  <span>{problem.native.tests_count} tests</span>
+                  <span>
+                    {problem.native.tests_count} {locale === 'vi' ? 'test' : 'tests'}
+                  </span>
                 </div>
 
                 <MarkdownRenderer content={problem.native.statement_md} />
@@ -687,7 +702,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                       <div className="p-3 bg-slate-50 dark:bg-slate-950">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                            Input #{idx + 1}
+                            {locale === 'vi' ? `Dữ liệu vào #${idx + 1}` : `Input #${idx + 1}`}
                           </span>
                           <button
                             type="button"
@@ -696,11 +711,19 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                               setCopiedSampleIdx(idx);
                               setTimeout(() => setCopiedSampleIdx(null), 1500);
                             }}
-                            aria-label={`Copy sample input ${idx + 1}`}
+                            aria-label={locale === 'vi' ? `Sao chép ví dụ ${idx + 1}` : `Copy sample input ${idx + 1}`}
                             className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
                           >
                             {copiedSampleIdx === idx ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                            <span>{copiedSampleIdx === idx ? 'Copied' : 'Copy'}</span>
+                            <span>
+                              {copiedSampleIdx === idx
+                                ? locale === 'vi'
+                                  ? 'Đã sao chép'
+                                  : 'Copied'
+                                : locale === 'vi'
+                                  ? 'Sao chép'
+                                  : 'Copy'}
+                            </span>
                           </button>
                         </div>
                         <pre className="text-xs font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
@@ -709,7 +732,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                       </div>
                       <div className="p-3 bg-slate-50 dark:bg-slate-950">
                         <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-                          Output #{idx + 1}
+                          {locale === 'vi' ? `Kết quả ra #${idx + 1}` : `Output #${idx + 1}`}
                         </span>
                         <pre className="text-xs font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
                           {s.output}
@@ -769,12 +792,12 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                         <div>
                           <VerdictBadge verdict={sub.verdict} status={sub.status} />
                           <p className="text-slate-500 dark:text-slate-400 mt-0.5">
-                            #{sub.id} · {sub.language} · {formatVnDateTime(sub.submitted_at)}
+                            #{sub.id} · {formatLanguage(sub.language)} · {formatVnDateTime(sub.submitted_at)}
                           </p>
                         </div>
                         <div className="text-right text-slate-600 dark:text-slate-300">
                           <p>
-                            {sub.tests_passed ?? 0}/{sub.tests_total ?? 0} tests
+                            {sub.tests_passed ?? 0}/{sub.tests_total ?? 0} {locale === 'vi' ? 'test' : 'tests'}
                           </p>
                           <p>{sub.max_time_ms ?? 0} ms</p>
                         </div>
@@ -804,7 +827,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
               >
                 {(problem.native?.allowed_languages || ['cpp17', 'python3']).map((lang) => (
                   <option key={lang} value={lang}>
-                    {lang === 'cpp17' ? 'C++17 (GCC)' : 'Python 3.10'}
+                    {lang === 'cpp17' ? 'C++17 (GCC)' : formatLanguage(lang)}
                   </option>
                 ))}
               </select>
@@ -850,7 +873,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                 </div>
                 <div className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-3">
                   <span>
-                    {liveJudge.tests_passed}/{liveJudge.tests_total} tests
+                    {liveJudge.tests_passed}/{liveJudge.tests_total} {locale === 'vi' ? 'test' : 'tests'}
                   </span>
                   <span>{liveJudge.score}/100</span>
                   {liveJudge.max_time_ms !== null && <span>{liveJudge.max_time_ms} ms</span>}
@@ -870,8 +893,8 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                       <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                         <tr>
                           <th className="px-3 py-2 font-medium">Test</th>
-                          <th className="px-3 py-2 font-medium">Verdict</th>
-                          <th className="px-3 py-2 font-medium text-right">Time</th>
+                          <th className="px-3 py-2 font-medium">{locale === 'vi' ? 'Kết quả' : 'Verdict'}</th>
+                          <th className="px-3 py-2 font-medium text-right">{locale === 'vi' ? 'Thời gian' : 'Time'}</th>
                           <th className="px-3 py-2 font-medium">{locale === 'vi' ? 'Chi tiết' : 'Message'}</th>
                         </tr>
                       </thead>
@@ -879,7 +902,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                         {liveJudge.tests.map((tr) => (
                           <tr key={tr.test_name}>
                             <td className="px-3 py-1.5 font-mono text-slate-700 dark:text-slate-300">
-                              {tr.test_name} {tr.is_sample ? '(sample)' : ''}
+                              {tr.test_name} {tr.is_sample ? (locale === 'vi' ? '(mẫu)' : '(sample)') : ''}
                             </td>
                             <td className="px-3 py-1.5">
                               <VerdictBadge verdict={tr.verdict} compact />
@@ -909,15 +932,19 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                         </p>
                         <div className="grid sm:grid-cols-2 gap-3 font-mono">
                           <div>
-                            <p className="text-slate-500 mb-1">Output của bạn:</p>
+                            <p className="text-slate-500 mb-1">
+                              {locale === 'vi' ? 'Kết quả của bạn:' : 'Your Output:'}
+                            </p>
                             <pre className="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-x-auto">
-                              {tr.stdout_preview || '(empty)'}
+                              {tr.stdout_preview || (locale === 'vi' ? '(trống)' : '(empty)')}
                             </pre>
                           </div>
                           <div>
-                            <p className="text-slate-500 mb-1">Đáp án chuẩn:</p>
+                            <p className="text-slate-500 mb-1">
+                              {locale === 'vi' ? 'Đáp án chuẩn:' : 'Expected Output:'}
+                            </p>
                             <pre className="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-x-auto">
-                              {tr.expected_preview || '(empty)'}
+                              {tr.expected_preview || (locale === 'vi' ? '(trống)' : '(empty)')}
                             </pre>
                           </div>
                         </div>
