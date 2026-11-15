@@ -355,7 +355,7 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
     parsedProblems: parsed.problems,
     parsedLinks: parsed.lessonProblems,
     natives,
-    contestCopyVersion: 2,
+    contestCopyVersion: 4,
   });
 
   const existingSeed = db
@@ -727,19 +727,23 @@ export function seedDatabase(db: DatabaseSync, assetsDir = ASSETS_DIR): { skippe
             0, // Native problems appear first in lesson tabs
             'approved',
             'strong',
-            'Bài tập chấm trực tiếp chính thức của DuckOJ.',
+            'Bài tập chấm trên web của DuckOJ.',
             adminId,
             nowIso
           );
         }
       }
     }
+    db.prepare('UPDATE lesson_problems SET reviewer_note = ? WHERE reviewer_note = ?').run(
+      'Bài tập chấm trên web của DuckOJ.',
+      'Bài tập chấm trực tiếp chính thức của DuckOJ.'
+    );
 
     // 7. Seed 2 sample contests if empty (and keep description copy up to date)
     const weeklyDesc =
-      'Kỳ thi luyện tập hàng tuần theo thể thức ICPC (phạt 20 phút cho mỗi lần nộp sai trước khi AC, không tính phạt lỗi biên dịch CE). Gồm 4 bài chấm trực tiếp từ Cấp 0 đến Cấp 2.';
+      'Kỳ thi luyện tập hàng tuần theo luật ICPC (cộng 20 phút phạt cho mỗi lần nộp sai trước khi làm đúng; lỗi biên dịch không bị tính phạt). Gồm 4 bài từ Cấp 0 đến Cấp 2.';
     const springDesc =
-      'Kỳ thi thử thách gồm các bài Quy hoạch động, Dijkstra và LCA trên cây. Đề bài sẽ tự động mở khóa đúng thời điểm bắt đầu.';
+      'Kỳ thi gồm các bài Quy hoạch động, Dijkstra và LCA trên cây. Đề bài sẽ tự động mở khi đến giờ bắt đầu.';
 
     const contestCount = (db.prepare('SELECT COUNT(*) AS c FROM contests').get() as { c: number }).c;
     if (contestCount === 0) {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Code2, Eye, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Code2, Eye, RefreshCw, X } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useApp } from '../context/AppContext';
 import { formatLanguage, formatVnDateTime } from '../lib/i18n';
@@ -38,8 +38,16 @@ export function SubmissionsPage() {
 
   const pageSize = 20;
 
-  const loadList = useCallback(async () => {
-    setLoading(true);
+  useEffect(() => {
+    if (!user) {
+      setScope('all');
+      setVerdictFilter('');
+      setSelected(null);
+    }
+  }, [user]);
+
+  const loadList = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       if (scope === 'mine' && user) {
         const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
@@ -54,10 +62,12 @@ export function SubmissionsPage() {
         setTotal(res.total);
       }
     } catch {
-      setItems([]);
-      setTotal(0);
+      if (!silent) {
+        setItems([]);
+        setTotal(0);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [page, scope, user, verdictFilter]);
 
@@ -65,7 +75,28 @@ export function SubmissionsPage() {
     void loadList();
   }, [loadList]);
 
+  useEffect(() => {
+    const hasPending = items.some((r) => r.status === 'queued' || r.status === 'judging');
+    if (!hasPending) return;
+    const timer = window.setInterval(() => {
+      void loadList(true);
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [items, loadList]);
+
+  useEffect(() => {
+    if (!selected && !detailLoading) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelected(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selected, detailLoading]);
+
   const openDetail = async (id: number) => {
+    setSelected(null);
     setDetailError('');
     setDetailLoading(true);
     try {
@@ -86,11 +117,11 @@ export function SubmissionsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-display">
-            {locale === 'vi' ? 'Nhật ký bài nộp' : 'Submissions Feed'}
+            {locale === 'vi' ? 'Lịch sử nộp bài' : 'Submissions Feed'}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             {locale === 'vi'
-              ? 'Theo dõi trạng thái chấm bài theo thời gian thực trên máy chấm DuckOJ.'
+              ? 'Xem kết quả chấm các bài nộp trên DuckOJ.'
               : 'Live queue and verdict stream across DuckOJ native problems.'}
           </p>
         </div>
@@ -147,6 +178,15 @@ export function SubmissionsPage() {
               ))}
             </select>
           )}
+
+          <button
+            type="button"
+            onClick={() => loadList()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>{locale === 'vi' ? 'Làm mới' : 'Refresh'}</span>
+          </button>
         </div>
       </div>
 
@@ -169,7 +209,7 @@ export function SubmissionsPage() {
                 <th className="py-3 px-4 font-semibold">{locale === 'vi' ? 'Kết quả' : 'Verdict'}</th>
                 <th className="py-3 px-4 font-semibold text-right">{locale === 'vi' ? 'Số test' : 'Tests'}</th>
                 <th className="py-3 px-4 font-semibold text-right">{locale === 'vi' ? 'Thời gian chạy' : 'Time'}</th>
-                <th className="py-3 px-4 font-semibold text-right">{locale === 'vi' ? 'Chi tiết' : 'Code'}</th>
+                <th className="py-3 px-4 font-semibold text-right">{locale === 'vi' ? 'Bài làm' : 'Code'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -322,7 +362,7 @@ export function SubmissionsPage() {
                 {selected.compile_log && (
                   <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3">
                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      {locale === 'vi' ? 'Nhật ký biên dịch' : 'Compiler Output'}
+                      {locale === 'vi' ? 'Lỗi biên dịch' : 'Compiler Output'}
                     </p>
                     <pre className="text-xs font-mono text-rose-700 dark:text-rose-300 whitespace-pre-wrap overflow-x-auto">
                       {selected.compile_log}
@@ -332,7 +372,7 @@ export function SubmissionsPage() {
 
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-                    {locale === 'vi' ? 'Mã nguồn' : 'Source Code'} ({formatLanguage(selected.language)})
+                    {locale === 'vi' ? 'Code đã nộp' : 'Source Code'} ({formatLanguage(selected.language)})
                   </p>
                   <HighlightedCodeBlock code={selected.source_code} language={selected.language} />
                 </div>
@@ -340,7 +380,7 @@ export function SubmissionsPage() {
                 {selected.tests && selected.tests.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-                      {locale === 'vi' ? 'Chi tiết từng test' : 'Test Case Results'}
+                      {locale === 'vi' ? 'Kết quả từng test' : 'Test Case Results'}
                     </p>
                     <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {selected.tests.map((tr) => (

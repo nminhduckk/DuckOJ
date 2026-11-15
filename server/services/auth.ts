@@ -1,10 +1,32 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Request, Response, NextFunction } from 'express';
 import type { DatabaseSync } from 'node:sqlite';
 
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  crypto.createHash('sha256').update('duckoj-dev-jwt-secret-change-in-production').digest('hex');
+function loadJwtSecret(): string {
+  const fromEnv = process.env.JWT_SECRET?.trim();
+  if (fromEnv) return fromEnv;
+
+  const secretPath = path.resolve(process.cwd(), '.data/.jwt_secret');
+  try {
+    const existing = fs.readFileSync(secretPath, 'utf8').trim();
+    if (existing.length >= 32) return existing;
+  } catch {
+    // create below
+  }
+
+  const generated = crypto.randomBytes(32).toString('hex');
+  try {
+    fs.mkdirSync(path.dirname(secretPath), { recursive: true });
+    fs.writeFileSync(secretPath, generated, { encoding: 'utf8', mode: 0o600 });
+  } catch {
+    // in-memory random fallback if .data is read-only
+  }
+  return generated;
+}
+
+const JWT_SECRET = loadJwtSecret();
 
 export interface AuthUser {
   id: number;

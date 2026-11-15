@@ -63,11 +63,11 @@ export function LearnPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display">
-            {locale === 'vi' ? 'Danh mục 74 bài học' : '74-Lesson Directory'}
+            {locale === 'vi' ? 'Danh sách 74 bài học' : '74-Lesson Directory'}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             {locale === 'vi'
-              ? 'Mỗi bài gồm mục tiêu, lý thuyết trực quan, code mẫu C++17, bẫy thường gặp, bài tập phân tầng và trắc nghiệm củng cố.'
+              ? 'Mỗi bài gồm lý thuyết ngắn gọn, code mẫu C++17, lỗi hay gặp, bài tập và câu hỏi kiểm tra.'
               : 'Each lesson includes objectives, theory, C++17 reference code, pitfalls, tiered problems, and a quiz.'}
           </p>
         </div>
@@ -79,7 +79,7 @@ export function LearnPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label={locale === 'vi' ? 'Tìm kiếm bài học' : 'Search lessons'}
-            placeholder={locale === 'vi' ? 'Tìm mã bài, tên hoặc chuyên đề...' : 'Search lesson code, title, topic...'}
+            placeholder={locale === 'vi' ? 'Tìm mã bài, tên bài hoặc chủ đề...' : 'Search lesson code, title, topic...'}
             className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-slate-100"
           />
         </div>
@@ -96,7 +96,7 @@ export function LearnPage() {
               : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          {locale === 'vi' ? 'Tất cả cấp' : 'All levels'}
+          {locale === 'vi' ? 'Tất cả' : 'All levels'}
         </button>
         {tracks.map((tr) => (
           <button
@@ -127,7 +127,7 @@ export function LearnPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 text-center text-sm text-slate-500 dark:text-slate-400">
-          {locale === 'vi' ? 'Không có bài học nào khớp bộ lọc.' : 'No lessons match your filter.'}
+          {locale === 'vi' ? 'Không có bài học nào phù hợp.' : 'No lessons match your filter.'}
         </div>
       ) : (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
@@ -136,11 +136,11 @@ export function LearnPage() {
               <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Mã' : 'Code'}</th>
-                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Bài học' : 'Lesson'}</th>
+                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Tên bài' : 'Lesson'}</th>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Chặng' : 'Track'}</th>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Độ phức tạp' : 'Complexity'}</th>
                   <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Bài tập' : 'Problems'}</th>
-                  <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Trạng thái' : 'Status'}</th>
+                  <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Tiến độ' : 'Status'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -179,7 +179,7 @@ export function LearnPage() {
                     <td className="px-4 py-3 text-right text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
                       {n.approved_problems}{' '}
                       {n.native_problems > 0
-                        ? `(${n.native_problems} ${locale === 'vi' ? 'chấm trực tiếp' : 'native'})`
+                        ? `(${n.native_problems} ${locale === 'vi' ? 'chấm trên web' : 'native'})`
                         : ''}
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">

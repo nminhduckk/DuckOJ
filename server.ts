@@ -17,6 +17,7 @@ async function startServer() {
   );
 
   const app = express();
+  app.set('trust proxy', 1);
 
   // Security headers (§11)
   app.use((_req, res, next) => {

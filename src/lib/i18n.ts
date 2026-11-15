@@ -13,23 +13,23 @@ export const MESSAGES = {
     login: 'Đăng nhập',
     register: 'Đăng ký',
     logout: 'Đăng xuất',
-    startFromZero: 'Bắt đầu từ Cấp 0',
+    startFromZero: 'Bắt đầu học từ Cấp 0',
     continueLearning: 'Học tiếp',
-    themeLight: 'Giao diện sáng',
-    themeDark: 'Giao diện tối',
+    themeLight: 'Chế độ sáng',
+    themeDark: 'Chế độ tối',
     statusNotStarted: 'Chưa học',
     statusReading: 'Đang học',
-    statusDone: 'Hoàn thành',
+    statusDone: 'Đã xong',
     probNotStarted: 'Chưa làm',
     probAttempted: 'Đang làm',
-    probSolved: 'Đã giải',
-    probMastered: 'Thành thạo',
+    probSolved: 'Đã làm đúng',
+    probMastered: 'Đã vững',
     submitCode: 'Nộp bài',
     submitting: 'Đang chấm...',
-    nativeBadge: 'Chấm trực tiếp',
+    nativeBadge: 'Chấm trên web',
     externalBadge: 'Nguồn ngoài',
     updating: 'Đang cập nhật',
-    reportIssue: 'Báo lỗi / Bản quyền',
+    reportIssue: 'Báo lỗi',
   },
   en: {
     brand: 'DuckOJ',
@@ -59,21 +59,21 @@ export const MESSAGES = {
     nativeBadge: 'DuckOJ Judge',
     externalBadge: 'External Link',
     updating: 'Updating',
-    reportIssue: 'Report / Copyright',
+    reportIssue: 'Report Issue',
   },
 } as const;
 
 const ROLE_LABELS: Record<Locale, Record<string, string>> = {
-  vi: { student: 'Học viên', reviewer: 'Kiểm duyệt viên', admin: 'Quản trị viên' },
+  vi: { student: 'Học viên', reviewer: 'Người duyệt bài', admin: 'Quản trị viên' },
   en: { student: 'Student', reviewer: 'Reviewer', admin: 'Admin' },
 };
 
 const HINT_TYPE_LABELS: Record<Locale, Record<string, string>> = {
   vi: {
-    nudge: 'Gợi mở hướng đi',
-    approach: 'Hướng tiếp cận',
-    idea: 'Ý tưởng lời giải',
-    code: 'Code mẫu tham khảo',
+    nudge: 'Gợi mở',
+    approach: 'Cách làm',
+    idea: 'Ý tưởng chính',
+    code: 'Code mẫu',
   },
   en: {
     nudge: 'Nudge',
@@ -85,15 +85,15 @@ const HINT_TYPE_LABELS: Record<Locale, Record<string, string>> = {
 
 const SOURCE_KIND_LABELS: Record<Locale, Record<string, string>> = {
   vi: {
-    handbook: 'Giáo trình tổng hợp',
-    docs: 'Tài liệu chuẩn',
+    handbook: 'Tài liệu tổng hợp',
+    docs: 'Tài liệu hướng dẫn',
     wiki: 'Từ điển thuật toán',
-    'cp-algorithms': 'Chuyên khảo CP-Algorithms',
-    usaco: 'Tài liệu USACO Guide',
+    'cp-algorithms': 'Bài viết CP-Algorithms',
+    usaco: 'Hướng dẫn USACO',
     codeforces: 'Bài viết Codeforces',
-    oj: 'Hệ thống chấm bài',
-    editorial: 'Lời giải tham khảo',
-    book: 'Sách chuyên khảo',
+    oj: 'Trang luyện tập',
+    editorial: 'Lời giải mẫu',
+    book: 'Sách tham khảo',
   },
   en: {
     handbook: 'Handbook',
@@ -110,12 +110,12 @@ const SOURCE_KIND_LABELS: Record<Locale, Record<string, string>> = {
 
 const CHECKER_LABELS: Record<Locale, Record<string, string>> = {
   vi: {
-    tokens: 'So khớp token (bỏ qua khoảng trắng thừa)',
+    tokens: 'So khớp giá trị (bỏ qua khoảng trắng thừa)',
     lines: 'So khớp từng dòng',
-    float: 'Số thực (sai số cho phép)',
+    float: 'Số thực (có sai số cho phép)',
     float_1e6: 'Số thực (sai số ≤ 10⁻⁶)',
     float_1e9: 'Số thực (sai số ≤ 10⁻⁹)',
-    custom: 'Trình chấm riêng (đa nghiệm)',
+    custom: 'Chấp nhận nhiều đáp án đúng',
   },
   en: {
     tokens: 'Token comparison',
@@ -144,31 +144,31 @@ const TRACK_LABELS: Record<Locale, Record<number, { name: string; description: s
   vi: {
     0: {
       name: 'Nhập môn',
-      description: 'Làm quen cú pháp C++, vào/ra chuẩn, kiểu dữ liệu, vòng lặp, mảng, chuỗi và toán cơ bản.',
+      description: 'Làm quen C++, nhập xuất dữ liệu, kiểu số, vòng lặp, mảng, chuỗi và toán cơ bản.',
     },
     1: {
       name: 'Cơ bản',
-      description: 'Duyệt vét cạn, sắp xếp, chuỗi nâng cao, số học cơ bản, mô phỏng, bài toán xây dựng, tham lam, hai con trỏ và mảng cộng dồn.',
+      description: 'Duyệt các trường hợp, sắp xếp, xử lý chuỗi, tham lam, hai con trỏ và mảng cộng dồn.',
     },
     2: {
       name: 'Cơ bản+',
-      description: 'Thành thạo thư viện STL, cửa sổ trượt, tìm kiếm nhị phân theo đáp án, đếm bằng bảng băm, sàng Eratosthenes và lũy thừa nhanh.',
+      description: 'Dùng thành thạo STL, cửa sổ trượt, tìm kiếm nhị phân, đếm nhanh, sàng số nguyên tố.',
     },
     3: {
       name: 'Trung cấp 1',
-      description: 'Quy hoạch động cơ bản và trên lưới, duyệt đồ thị DFS/BFS, DSU, sàng tuyến tính, lũy thừa ma trận và quy hoạch động trên DAG.',
+      description: 'Quy hoạch động cơ bản và trên lưới, duyệt đồ thị DFS/BFS, DSU và nhân ma trận.',
     },
     4: {
       name: 'Trung cấp 2',
-      description: 'Đường đi ngắn nhất (Dijkstra, Bellman-Ford, Floyd), cây khung nhỏ nhất, Fenwick, Segment Tree, Bitmask DP, Tree DP và KMP/Hashing.',
+      description: 'Đường đi ngắn nhất, cây khung nhỏ nhất, Fenwick, Segment Tree và khớp chuỗi.',
     },
     5: {
       name: 'Nâng cao',
-      description: 'LCA, HLD, Centroid, thành phần liên thông mạnh, cầu/khớp, luồng cực đại, ghép cặp, Convex Hull Trick, Mo và Sprague-Grundy.',
+      description: 'LCA, HLD, Centroid, thành phần liên thông mạnh, luồng cực đại và lý thuyết trò chơi.',
     },
     6: {
       name: 'Chuyên gia',
-      description: 'FFT/NTT, Persistent Segment Tree, Li Chao, Link-Cut Tree, hình học tính toán, luồng chi phí cực tiểu, Matroid và Suffix Automaton.',
+      description: 'FFT/NTT, Persistent Segment Tree, Li Chao, hình học tính toán và Suffix Automaton.',
     },
   },
   en: {

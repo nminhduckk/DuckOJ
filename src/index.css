@@ -5,8 +5,8 @@
 
 @layer base {
   :root {
-    --font-display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --font-display: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
+    --font-sans: 'Inter', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 

@@ -48,11 +48,11 @@ export function ContestsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display">
-          {locale === 'vi' ? 'Kỳ thi lập trình DuckOJ' : 'DuckOJ Contests'}
+          {locale === 'vi' ? 'Kỳ thi' : 'DuckOJ Contests'}
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
           {locale === 'vi'
-            ? 'Thử sức trong thời gian thực theo thể thức ICPC chuẩn với bảng xếp hạng cập nhật trực tiếp.'
+            ? 'Luyện giải đề có tính giờ và xem bảng xếp hạng cập nhật ngay.'
             : 'Compete in ICPC-format timed rounds with live penalty standings.'}
         </p>
       </div>
@@ -65,7 +65,7 @@ export function ContestsPage() {
         </div>
       ) : contests.length === 0 ? (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 text-center text-sm text-slate-500">
-          {locale === 'vi' ? 'Chưa có kỳ thi nào được mở.' : 'No public contests available.'}
+          {locale === 'vi' ? 'Chưa có kỳ thi nào.' : 'No public contests available.'}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
@@ -99,7 +99,7 @@ export function ContestsPage() {
                     <span className="inline-flex items-center gap-1">
                       <Users className="w-3.5 h-3.5" />
                       <span>
-                        {c.participant_count} {locale === 'vi' ? 'thí sinh' : 'participants'}
+                        {c.participant_count} {locale === 'vi' ? 'người tham gia' : 'participants'}
                       </span>
                     </span>
                   </div>
@@ -114,7 +114,7 @@ export function ContestsPage() {
                     onClick={() => navigate(`/contests/${c.slug}`)}
                     className="px-4 py-2 rounded-lg bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 text-xs font-semibold hover:bg-slate-800 dark:hover:bg-amber-400"
                   >
-                    {locale === 'vi' ? 'Vào phòng thi' : 'Enter Contest'}
+                    {locale === 'vi' ? 'Vào thi' : 'Enter Contest'}
                   </button>
                 </div>
               </div>

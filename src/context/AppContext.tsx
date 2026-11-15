@@ -51,6 +51,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem('duckoj_theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
     window.localStorage.setItem('duckoj_locale', l);

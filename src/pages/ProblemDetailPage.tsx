@@ -10,7 +10,7 @@ import {
   Trophy,
   Unlock,
 } from 'lucide-react';
-import { apiFetch, ApiError, getAccessToken } from '../lib/api';
+import { apiFetch, ApiError, getAccessToken, refreshSession } from '../lib/api';
 import {
   formatChecker,
   formatHintType,
@@ -90,6 +90,11 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
   };
 
   useEffect(() => {
+    setLeftTab('statement');
+    setMySubs([]);
+  }, [slug]);
+
+  useEffect(() => {
     setLiveJudge(null);
     setSubmitErr(null);
     setHintErr(null);
@@ -119,13 +124,24 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
     const ctrl = new AbortController();
     abortSseRef.current = ctrl;
 
-    const token = getAccessToken();
+    let token = getAccessToken();
     try {
-      const res = await fetch(`/api/v1/submissions/${subId}/events`, {
+      let res = await fetch(`/api/v1/submissions/${subId}/events`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: 'include',
         signal: ctrl.signal,
       });
+
+      if (res.status === 401) {
+        token = await refreshSession();
+        if (token) {
+          res = await fetch(`/api/v1/submissions/${subId}/events`, {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: 'include',
+            signal: ctrl.signal,
+          });
+        }
+      }
 
       if (!res.ok || !res.body) {
         throw new Error('SSE unavailable');
@@ -245,6 +261,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
   };
 
   const handleSubmitCode = async () => {
+    if (submitting) return;
     if (!user) {
       navigate('/login');
       return;
@@ -323,7 +340,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
         body: JSON.stringify({ status: extStatus, notes: extNotes }),
       });
       setProblem({ ...problem, my_progress: res.progress });
-      setExtMsg(locale === 'vi' ? 'Đã lưu trạng thái và ghi chú.' : 'Progress and notes saved.');
+      setExtMsg(locale === 'vi' ? 'Đã lưu tiến độ và ghi chú.' : 'Progress and notes saved.');
     } catch (err) {
       setExtMsg(err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể lưu.' : 'Failed to save.');
     } finally {
@@ -348,7 +365,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
       });
       setExtMsg(
         locale === 'vi'
-          ? `Đã ghi nhận lần thử thứ ${res.attempts}.`
+          ? `Đã lưu lần thử thứ ${res.attempts}.`
           : `Recorded attempt #${res.attempts}.`
       );
     } catch (err) {
@@ -387,7 +404,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
           {locale === 'vi'
-            ? `Đã mở ${problem.unlocked_hints.length} / ${problem.total_hints} tầng gợi ý`
+            ? `Đã mở ${problem.unlocked_hints.length} / ${problem.total_hints} gợi ý`
             : `Unlocked ${problem.unlocked_hints.length} / ${problem.total_hints} hint tiers`}
         </p>
         {problem.unlocked_hints.length < problem.total_hints && (
@@ -404,7 +421,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                   ? 'Đang mở...'
                   : 'Unlocking...'
                 : locale === 'vi'
-                  ? `Mở gợi ý tầng ${problem.unlocked_hints.length + 1}`
+                  ? `Mở gợi ý ${problem.unlocked_hints.length + 1}`
                   : `Unlock Hint Tier ${problem.unlocked_hints.length + 1}`}
             </span>
           </button>
@@ -421,11 +438,11 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
       {problem.unlocked_hints.length === 0 ? (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-5 text-xs text-slate-600 dark:text-slate-400 space-y-1.5">
           <p className="font-medium text-slate-800 dark:text-slate-200">
-            {locale === 'vi' ? 'Gợi ý mở theo tiến độ thử sức' : 'Progressive Anti-Spoil Hints'}
+            {locale === 'vi' ? 'Gợi ý mở dần khi bạn cần' : 'Progressive Anti-Spoil Hints'}
           </p>
           <p>
             {locale === 'vi'
-              ? 'Tầng 1 mở sau 1 lần nộp/thử hoặc sau 5 phút đọc đề. Các tầng cao hơn mở sau 2, 3 và 5 lần thử, cách nhau tối thiểu 3 phút giữa mỗi tầng.'
+              ? 'Gợi ý 1 mở sau 1 lần nộp thử hoặc đọc đề đủ 5 phút. Các gợi ý sau mở sau 2, 3 và 5 lần thử (cách nhau 3 phút).'
               : 'Tier 1 unlocks after 1 attempt or 5 minutes of reading. Higher tiers require 2, 3, and 5 attempts with a 3-minute cooldown between tiers.'}
           </p>
         </div>
@@ -439,7 +456,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
               <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                 <HelpCircle className="w-3.5 h-3.5" />
                 <span>
-                  {locale === 'vi' ? `Gợi ý tầng ${h.level}` : `Hint Tier ${h.level}`} · {formatHintType(h.type, locale)}
+                  {locale === 'vi' ? `Gợi ý ${h.level}` : `Hint Tier ${h.level}`} · {formatHintType(h.type, locale)}
                 </span>
               </p>
               <MarkdownRenderer content={h.text_md} />
@@ -518,7 +535,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
               className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               {locale === 'vi'
-                ? `Đã thử nộp ngoài (${problem.my_progress.attempts} lần)`
+                ? `Đã thử giải (${problem.my_progress.attempts} lần)`
                 : `Tried externally (${problem.my_progress.attempts})`}
             </button>
           </div>
@@ -530,12 +547,12 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
             className="pt-5 border-t border-slate-200 dark:border-slate-800 space-y-4"
           >
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-              {locale === 'vi' ? 'Tự đánh dấu tiến độ & ghi chú cá nhân' : 'Self-Report Progress & Notes'}
+              {locale === 'vi' ? 'Đánh dấu tiến độ & ghi chú' : 'Self-Report Progress & Notes'}
             </h2>
             <div className="grid sm:grid-cols-3 gap-4">
               <div>
                 <label htmlFor="ext-status" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                  {locale === 'vi' ? 'Trạng thái' : 'Status'}
+                  {locale === 'vi' ? 'Tiến độ' : 'Status'}
                 </label>
                 <select
                   id="ext-status"
@@ -551,14 +568,14 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="ext-notes" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-                  {locale === 'vi' ? 'Ghi chú thuật toán / bẫy' : 'Personal algorithm notes'}
+                  {locale === 'vi' ? 'Ghi chú cách làm' : 'Personal algorithm notes'}
                 </label>
                 <input
                   id="ext-notes"
                   type="text"
                   value={extNotes}
                   onChange={(e) => setExtNotes(e.target.value)}
-                  placeholder={locale === 'vi' ? 'Ví dụ: Dùng hai con trỏ + sắp xếp...' : 'e.g. Two pointers + sorting...'}
+                  placeholder={locale === 'vi' ? 'Ví dụ: Sắp xếp rồi dùng hai con trỏ...' : 'e.g. Two pointers + sorting...'}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
                 />
               </div>
@@ -578,7 +595,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
 
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white font-display">
-            {locale === 'vi' ? 'Gợi ý 4 tầng' : '4-Tier Progressive Hints'}
+            {locale === 'vi' ? 'Gợi ý theo từng bước' : '4-Tier Progressive Hints'}
           </h2>
           {renderHintsPanel()}
         </div>
@@ -666,7 +683,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                   <span>{problem.native.memory_limit_mb} MB</span>
                   <span aria-hidden="true">·</span>
                   <span>
-                    {locale === 'vi' ? 'Kiểu chấm' : 'Checker'}: {formatChecker(problem.native.checker, locale)}
+                    {locale === 'vi' ? 'Cách chấm' : 'Checker'}: {formatChecker(problem.native.checker, locale)}
                   </span>
                   <span aria-hidden="true">·</span>
                   <span>
@@ -678,14 +695,14 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
 
                 <div className="space-y-2">
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {locale === 'vi' ? 'Dữ liệu vào' : 'Input'}
+                    {locale === 'vi' ? 'Đầu vào' : 'Input'}
                   </h2>
                   <MarkdownRenderer content={problem.native.input_spec_md} />
                 </div>
 
                 <div className="space-y-2">
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {locale === 'vi' ? 'Kết quả ra' : 'Output'}
+                    {locale === 'vi' ? 'Đầu ra' : 'Output'}
                   </h2>
                   <MarkdownRenderer content={problem.native.output_spec_md} />
                 </div>
@@ -702,7 +719,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                       <div className="p-3 bg-slate-50 dark:bg-slate-950">
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                            {locale === 'vi' ? `Dữ liệu vào #${idx + 1}` : `Input #${idx + 1}`}
+                            {locale === 'vi' ? `Đầu vào #${idx + 1}` : `Input #${idx + 1}`}
                           </span>
                           <button
                             type="button"
@@ -718,7 +735,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                             <span>
                               {copiedSampleIdx === idx
                                 ? locale === 'vi'
-                                  ? 'Đã sao chép'
+                                  ? 'Đã chép'
                                   : 'Copied'
                                 : locale === 'vi'
                                   ? 'Sao chép'
@@ -732,7 +749,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                       </div>
                       <div className="p-3 bg-slate-50 dark:bg-slate-950">
                         <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-                          {locale === 'vi' ? `Kết quả ra #${idx + 1}` : `Output #${idx + 1}`}
+                          {locale === 'vi' ? `Đầu ra #${idx + 1}` : `Output #${idx + 1}`}
                         </span>
                         <pre className="text-xs font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
                           {s.output}
@@ -933,7 +950,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                         <div className="grid sm:grid-cols-2 gap-3 font-mono">
                           <div>
                             <p className="text-slate-500 mb-1">
-                              {locale === 'vi' ? 'Kết quả của bạn:' : 'Your Output:'}
+                              {locale === 'vi' ? 'Bài của bạn in ra:' : 'Your Output:'}
                             </p>
                             <pre className="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-x-auto">
                               {tr.stdout_preview || (locale === 'vi' ? '(trống)' : '(empty)')}
@@ -941,7 +958,7 @@ export function ProblemDetailPage({ slug }: { slug: string }) {
                           </div>
                           <div>
                             <p className="text-slate-500 mb-1">
-                              {locale === 'vi' ? 'Đáp án chuẩn:' : 'Expected Output:'}
+                              {locale === 'vi' ? 'Đáp án đúng:' : 'Expected Output:'}
                             </p>
                             <pre className="p-2 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-x-auto">
                               {tr.expected_preview || (locale === 'vi' ? '(trống)' : '(empty)')}

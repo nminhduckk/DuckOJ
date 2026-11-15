@@ -34,6 +34,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
   const [quizSubmitting, setQuizSubmitting] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
   const [markingDone, setMarkingDone] = useState(false);
+  const [progressErr, setProgressErr] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
 
   const loadLesson = () => {
@@ -69,14 +70,21 @@ export function LessonDetailPage({ slug }: { slug: string }) {
     }
     if (!lesson) return;
     setMarkingDone(true);
+    setProgressErr(null);
     try {
       await apiFetch(`/lessons/${lesson.slug}/progress`, {
         method: 'PUT',
         body: JSON.stringify({ status }),
       });
       setLesson({ ...lesson, my_progress: { ...lesson.my_progress, status } });
-    } catch {
-      // ignore
+    } catch (err) {
+      setProgressErr(
+        err instanceof ApiError
+          ? err.message
+          : locale === 'vi'
+            ? 'Không thể cập nhật tiến độ bài học.'
+            : 'Failed to update lesson progress.'
+      );
     } finally {
       setMarkingDone(false);
     }
@@ -113,7 +121,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
       });
     } catch (err) {
       setQuizError(
-        err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể nộp bài trắc nghiệm.' : 'Failed to submit quiz.'
+        err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể nộp bài kiểm tra.' : 'Failed to submit quiz.'
       );
     } finally {
       setQuizSubmitting(false);
@@ -140,7 +148,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
           onClick={() => navigate('/learn')}
           className="px-4 py-2 rounded-lg bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 text-sm font-medium"
         >
-          {locale === 'vi' ? 'Quay lại danh mục bài học' : 'Back to lessons'}
+          {locale === 'vi' ? 'Quay lại danh sách bài học' : 'Back to lessons'}
         </button>
       </div>
     );
@@ -150,11 +158,11 @@ export function LessonDetailPage({ slug }: { slug: string }) {
     { id: 'sec-objectives', label: locale === 'vi' ? '1. Mục tiêu' : '1. Objectives' },
     { id: 'sec-theory', label: locale === 'vi' ? '2. Lý thuyết' : '2. Theory' },
     { id: 'sec-sample', label: locale === 'vi' ? '3. Code mẫu C++17' : '3. C++17 Sample' },
-    { id: 'sec-mistakes', label: locale === 'vi' ? '4. Lỗi thường gặp' : '4. Common Mistakes' },
-    { id: 'sec-sources', label: locale === 'vi' ? '5. Tài liệu nguồn' : '5. References' },
-    { id: 'sec-problems', label: locale === 'vi' ? '6. Bài tập thực hành' : '6. Practice Problems' },
-    { id: 'sec-hints', label: locale === 'vi' ? '7. Gợi ý theo bài' : '7. Lesson Hints' },
-    { id: 'sec-quiz', label: locale === 'vi' ? '8. Trắc nghiệm củng cố' : '8. Lesson Quiz' },
+    { id: 'sec-mistakes', label: locale === 'vi' ? '4. Lỗi hay gặp' : '4. Common Mistakes' },
+    { id: 'sec-sources', label: locale === 'vi' ? '5. Đọc thêm' : '5. References' },
+    { id: 'sec-problems', label: locale === 'vi' ? '6. Bài tập' : '6. Practice Problems' },
+    { id: 'sec-hints', label: locale === 'vi' ? '7. Gợi ý' : '7. Lesson Hints' },
+    { id: 'sec-quiz', label: locale === 'vi' ? '8. Kiểm tra nhanh' : '8. Lesson Quiz' },
   ];
 
   return (
@@ -181,10 +189,10 @@ export function LessonDetailPage({ slug }: { slug: string }) {
             <span>
               {lesson.my_progress.status === 'done'
                 ? locale === 'vi'
-                  ? 'Đã hoàn thành'
+                  ? 'Đã xong'
                   : 'Completed'
                 : locale === 'vi'
-                  ? 'Đánh dấu hoàn thành'
+                  ? 'Đánh dấu đã xong'
                   : 'Mark as Done'}
             </span>
           </button>
@@ -197,6 +205,12 @@ export function LessonDetailPage({ slug }: { slug: string }) {
           </button>
         </div>
       </div>
+
+      {progressErr && (
+        <div className="mb-4 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-4 py-2 text-xs text-rose-700 dark:text-rose-300">
+          {progressErr}
+        </div>
+      )}
 
       {/* Header metadata */}
       <header className="pb-6 mb-8 border-b border-slate-200 dark:border-slate-800">
@@ -219,7 +233,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
         </h1>
         {lesson.prereqs.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-            <span>{locale === 'vi' ? 'Bài tiên quyết:' : 'Prerequisites:'}</span>
+            <span>{locale === 'vi' ? 'Cần học trước:' : 'Prerequisites:'}</span>
             {lesson.prereqs.map((pr, idx) => (
               <React.Fragment key={pr.code}>
                 {idx > 0 && <span aria-hidden="true">·</span>}
@@ -243,7 +257,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
         {/* Sticky 8-section TOC on desktop */}
         <aside className="hidden lg:block lg:col-span-3 sticky top-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">
-            {locale === 'vi' ? 'Mục lục bài học' : 'Lesson Sections'}
+            {locale === 'vi' ? 'Nội dung bài học' : 'Lesson Sections'}
           </p>
           <nav className="space-y-1">
             {tocSections.map((sec) => (
@@ -354,7 +368,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
             {filteredProblems.length === 0 ? (
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-sm text-slate-500 dark:text-slate-400">
                 {locale === 'vi'
-                  ? 'Chưa có bài tập đã duyệt ở nhóm độ khó này.'
+                  ? 'Chưa có bài tập ở mức này.'
                   : 'No approved problems in this tier yet.'}
               </div>
             ) : (
@@ -409,10 +423,10 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                       >
                         {p.kind === 'native'
                           ? locale === 'vi'
-                            ? 'Mở IDE'
+                            ? 'Làm bài'
                             : 'Open IDE'
                           : locale === 'vi'
-                            ? 'Chi tiết'
+                            ? 'Xem đề'
                             : 'Details'}
                       </a>
                     </div>
@@ -449,7 +463,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                       <span className="inline-flex items-center gap-2">
                         <HelpCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                         <span>
-                          {locale === 'vi' ? `Gợi ý tầng ${h.level}` : `Hint Tier ${h.level}`} · {formatHintType(h.type, locale)}
+                          {locale === 'vi' ? `Gợi ý ${h.level}` : `Hint Tier ${h.level}`} · {formatHintType(h.type, locale)}
                         </span>
                       </span>
                       {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -532,10 +546,10 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                       >
                         {resItem.correct
                           ? locale === 'vi'
-                            ? '✓ Chính xác — '
+                            ? '✓ Đúng — '
                             : '✓ Correct — '
                           : locale === 'vi'
-                            ? '✗ Chưa đúng — '
+                            ? '✗ Sai — '
                             : '✗ Incorrect — '}
                         {resItem.explain}
                       </p>
@@ -553,7 +567,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                     : `Result: ${quizResult.score}/${quizResult.total} correct.`}
                   {quizResult.score === quizResult.total &&
                     (locale === 'vi'
-                      ? ' Bài học đã được tự động đánh dấu hoàn thành!'
+                      ? ' Bài học đã được đánh dấu xong!'
                       : ' Lesson marked as completed!')}
                 </div>
               )}
@@ -562,7 +576,7 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                 {!user && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {locale === 'vi'
-                      ? 'Đăng nhập để lưu điểm trắc nghiệm và tiến độ bài học.'
+                      ? 'Đăng nhập để lưu điểm và tiến độ học.'
                       : 'Sign in to save your quiz score and lesson progress.'}
                   </p>
                 )}
@@ -573,10 +587,10 @@ export function LessonDetailPage({ slug }: { slug: string }) {
                 >
                   {quizSubmitting
                     ? locale === 'vi'
-                      ? 'Đang chấm bài...'
+                      ? 'Đang chấm...'
                       : 'Grading...'
                     : locale === 'vi'
-                      ? 'Nộp bài trắc nghiệm'
+                      ? 'Nộp bài kiểm tra'
                       : 'Submit Quiz'}
                 </button>
               </div>

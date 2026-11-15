@@ -488,7 +488,7 @@ const makeQuiz = (title: string, topicDesc: string, extra: QuizQuestion[]): Quiz
         'Tràn số 32-bit (dùng int thay vì long long) hoặc thiếu xử lý trường hợp biên (N nhỏ nhất/lớn nhất)',
         'Dùng std::vector thay cho mảng tĩnh',
         'Tách hàm phụ quá nhiều',
-        'In khoảng trắng thừa ở cuối dòng khi trình chấm dùng chế độ so khớp token',
+        'In thêm một dấu cách ở cuối dòng khi máy chấm bỏ qua khoảng trắng thừa',
       ],
       answer_index: 0,
       explain: 'Các bài từ trung cấp trở lên thường có giá trị trung gian vượt $2^{31}-1$ hoặc có test biên đặc biệt.',

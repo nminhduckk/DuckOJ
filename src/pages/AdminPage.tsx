@@ -92,41 +92,55 @@ export function AdminPage() {
   // Reports & Audit
   const [reports, setReports] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [panelErr, setPanelErr] = useState('');
 
   const isStaff = user && (user.role === 'reviewer' || user.role === 'admin');
 
   const loadQueue = useCallback(async () => {
     if (!isStaff) return;
     setQueueLoading(true);
+    setPanelErr('');
     try {
       const res = await apiFetch<{ items: QueueRow[] }>(
         `/admin/review/queue?flag=${encodeURIComponent(flagFilter)}&status=${encodeURIComponent(statusFilter)}`
       );
       setQueue(res.items);
+    } catch (err: any) {
+      setPanelErr(err?.message || (locale === 'vi' ? 'Không thể tải hàng đợi duyệt bài.' : 'Failed to load review queue.'));
     } finally {
       setQueueLoading(false);
     }
-  }, [flagFilter, isStaff, statusFilter]);
+  }, [flagFilter, isStaff, locale, statusFilter]);
 
   const loadStats = useCallback(async () => {
     if (!isStaff) return;
-    const res = await apiFetch<{ items: LessonStatRow[]; meets_5_count: number; total_lessons: number }>(
-      '/admin/seed/stats'
-    );
-    setLessonStats(res.items);
-    setMeets5(res.meets_5_count);
-    setTotalLessons(res.total_lessons);
-  }, [isStaff]);
+    setPanelErr('');
+    try {
+      const res = await apiFetch<{ items: LessonStatRow[]; meets_5_count: number; total_lessons: number }>(
+        '/admin/seed/stats'
+      );
+      setLessonStats(res.items);
+      setMeets5(res.meets_5_count);
+      setTotalLessons(res.total_lessons);
+    } catch (err: any) {
+      setPanelErr(err?.message || (locale === 'vi' ? 'Không thể tải thống kê bài học.' : 'Failed to load lesson stats.'));
+    }
+  }, [isStaff, locale]);
 
   const loadReportsAndAudit = useCallback(async () => {
     if (!isStaff) return;
-    const [repRes, audRes] = await Promise.all([
-      apiFetch<{ items: any[] }>('/admin/reports'),
-      apiFetch<{ items: any[] }>('/admin/audit-log'),
-    ]);
-    setReports(repRes.items);
-    setAuditLogs(audRes.items);
-  }, [isStaff]);
+    setPanelErr('');
+    try {
+      const [repRes, audRes] = await Promise.all([
+        apiFetch<{ items: any[] }>('/admin/reports'),
+        apiFetch<{ items: any[] }>('/admin/audit-log'),
+      ]);
+      setReports(repRes.items);
+      setAuditLogs(audRes.items);
+    } catch (err: any) {
+      setPanelErr(err?.message || (locale === 'vi' ? 'Không thể tải báo lỗi và nhật ký.' : 'Failed to load reports and audit log.'));
+    }
+  }, [isStaff, locale]);
 
   useEffect(() => {
     if (!isStaff) return;
@@ -142,11 +156,11 @@ export function AdminPage() {
           <ShieldAlert className="w-6 h-6" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-display">
-          {locale === 'vi' ? 'Khu vực dành cho Kiểm duyệt viên & Quản trị viên' : 'Reviewer & Admin Access Only'}
+          {locale === 'vi' ? 'Chỉ dành cho Người duyệt bài & Quản trị viên' : 'Reviewer & Admin Access Only'}
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
           {locale === 'vi'
-            ? 'Vui lòng đăng nhập bằng tài khoản có quyền Kiểm duyệt viên hoặc Quản trị viên để truy cập hàng đợi duyệt bài và máy chấm.'
+            ? 'Hãy đăng nhập bằng tài khoản Người duyệt bài hoặc Quản trị viên để truy cập trang này.'
             : 'Sign in with a Reviewer or Admin account to inspect the moderation queue and judge diagnostics.'}
         </p>
         <button
@@ -185,9 +199,12 @@ export function AdminPage() {
 
   const handleRunSelftest = async () => {
     setSelftestRunning(true);
+    setPanelErr('');
     try {
       const report = await apiFetch<SelftestReport>('/admin/judge/selftest', { method: 'POST' });
       setSelftest(report);
+    } catch (err: any) {
+      setPanelErr(err?.message || (locale === 'vi' ? 'Không thể chạy kiểm thử máy chấm.' : 'Failed to run judge selftest.'));
     } finally {
       setSelftestRunning(false);
     }
@@ -196,9 +213,14 @@ export function AdminPage() {
   const handleRejudge = async (e: React.FormEvent) => {
     e.preventDefault();
     setRejudgeMsg('');
+    const parsedId = Number(rejudgeId);
+    if (!Number.isInteger(parsedId) || parsedId <= 0) {
+      setRejudgeMsg(locale === 'vi' ? 'Mã bài nộp không hợp lệ.' : 'Invalid submission ID.');
+      return;
+    }
     try {
       const res = await apiFetch<{ ok: boolean; id: number; status: string }>(
-        `/admin/submissions/${Number(rejudgeId)}/rejudge`,
+        `/admin/submissions/${parsedId}/rejudge`,
         { method: 'POST' }
       );
       setRejudgeMsg(
@@ -231,11 +253,16 @@ export function AdminPage() {
   };
 
   const handleReportStatus = async (id: number, status: 'resolved' | 'dismissed', archive_target = false) => {
-    await apiFetch(`/admin/reports/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status, archive_target }),
-    });
-    await loadReportsAndAudit();
+    setPanelErr('');
+    try {
+      await apiFetch(`/admin/reports/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status, archive_target }),
+      });
+      await loadReportsAndAudit();
+    } catch (err: any) {
+      setPanelErr(err?.message || (locale === 'vi' ? 'Không thể cập nhật trạng thái báo lỗi.' : 'Failed to update report status.'));
+    }
   };
 
   const filteredStats = lessonStats.filter(
@@ -253,16 +280,16 @@ export function AdminPage() {
             @{user.handle} · {formatRole(user.role, locale)}
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-display mt-1">
-            {locale === 'vi' ? 'Bảng điều khiển kiểm duyệt & quản trị' : 'Moderation & Judge Console'}
+            {locale === 'vi' ? 'Quản lý bài tập & máy chấm' : 'Moderation & Judge Console'}
           </h1>
         </div>
 
         <div className="flex flex-wrap gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1">
           {[
-            { id: 'queue', label: locale === 'vi' ? 'Hàng đợi duyệt' : 'Review Queue' },
+            { id: 'queue', label: locale === 'vi' ? 'Duyệt bài tập' : 'Review Queue' },
             { id: 'stats', label: locale === 'vi' ? 'Thống kê 74 bài' : 'Lesson Coverage' },
             { id: 'judge', label: locale === 'vi' ? 'Máy chấm & Test' : 'Judge Selftest' },
-            { id: 'reports', label: locale === 'vi' ? 'Báo cáo & Nhật ký' : 'Reports & Audit' },
+            { id: 'reports', label: locale === 'vi' ? 'Báo lỗi & Nhật ký' : 'Reports & Audit' },
           ].map((item) => (
             <button
               key={item.id}
@@ -279,6 +306,12 @@ export function AdminPage() {
           ))}
         </div>
       </div>
+
+      {panelErr && (
+        <div className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-4 py-2.5 text-xs text-rose-700 dark:text-rose-300">
+          {panelErr}
+        </div>
+      )}
 
       {/* TAB 1: REVIEW QUEUE */}
       {tab === 'queue' && (
@@ -460,7 +493,7 @@ export function AdminPage() {
                     <th className="py-2.5 px-4">{locale === 'vi' ? 'Mã bài' : 'Code'}</th>
                     <th className="py-2.5 px-4">{locale === 'vi' ? 'Bài học' : 'Lesson'}</th>
                     <th className="py-2.5 px-4 text-right">{locale === 'vi' ? 'Đã duyệt' : 'Approved'}</th>
-                    <th className="py-2.5 px-4 text-right">{locale === 'vi' ? 'Chấm trực tiếp' : 'Native'}</th>
+                    <th className="py-2.5 px-4 text-right">{locale === 'vi' ? 'Chấm trên web' : 'Native'}</th>
                     <th className="py-2.5 px-4 text-right">{locale === 'vi' ? 'Khớp yếu' : 'Weak'}</th>
                     <th className="py-2.5 px-4 text-right">{locale === 'vi' ? 'Chờ duyệt' : 'Pending'}</th>
                     <th className="py-2.5 px-4 text-right">{locale === 'vi' ? 'Từ chối tự động' : 'Auto-Rej'}</th>
@@ -497,11 +530,11 @@ export function AdminPage() {
               <div>
                 <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <span>{locale === 'vi' ? 'Kiểm thử máy chấm 17 ca chuẩn' : '17-Case Judge Selftest Suite'}</span>
+                  <span>{locale === 'vi' ? 'Kiểm tra máy chấm (17 ca chuẩn)' : '17-Case Judge Selftest Suite'}</span>
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {locale === 'vi'
-                    ? 'Chạy trực tiếp trên sandbox với toàn bộ ca AC, WA, CE, TLE, MLE, RE, OLE và chống vượt rào.'
+                    ? 'Chạy thử các ca AC, WA, CE, TLE, MLE, RE, OLE và kiểm tra an toàn sandbox.'
                     : 'Executes live sandbox verification across AC, WA, CE, TLE, MLE, RE, OLE, and security isolation.'}
                 </p>
               </div>
@@ -647,10 +680,10 @@ export function AdminPage() {
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <FileWarning className="w-4 h-4 text-amber-600" />
-              <span>{locale === 'vi' ? 'Báo cáo từ người dùng' : 'User Reports'}</span>
+              <span>{locale === 'vi' ? 'Báo lỗi từ người học' : 'User Reports'}</span>
             </h2>
             {reports.length === 0 ? (
-              <p className="text-xs text-slate-500 py-4">{locale === 'vi' ? 'Chưa có báo cáo nào.' : 'No reports yet.'}</p>
+              <p className="text-xs text-slate-500 py-4">{locale === 'vi' ? 'Chưa có báo lỗi nào.' : 'No reports yet.'}</p>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {reports.map((rep) => (
@@ -697,7 +730,7 @@ export function AdminPage() {
 
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
             <h2 className="text-base font-bold text-slate-900 dark:text-white">
-              {locale === 'vi' ? 'Nhật ký kiểm duyệt' : 'Audit Log'}
+              {locale === 'vi' ? 'Nhật ký hoạt động' : 'Audit Log'}
             </h2>
             {auditLogs.length === 0 ? (
               <p className="text-xs text-slate-500 py-4">{locale === 'vi' ? 'Chưa có thao tác nào.' : 'No audit events.'}</p>

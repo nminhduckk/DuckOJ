@@ -104,8 +104,8 @@ export function CodeEditor({
           </span>
           <span className="hidden sm:inline text-slate-500 truncate">
             {locale === 'vi'
-              ? 'Tab = 4 khoảng trắng · Tự động căn lề · Ctrl+Enter để nộp'
-              : 'Tab = 4 spaces · Auto-indent · Ctrl+Enter to submit'}
+              ? 'Tự động căn lề · Ctrl+Enter để nộp'
+              : 'Auto-indent · Ctrl+Enter to submit'}
           </span>
         </div>
         {onReset && (
@@ -115,7 +115,7 @@ export function CodeEditor({
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#30363d] bg-[#161b22] text-xs font-medium text-slate-200 hover:text-white hover:bg-[#1f242c] transition-colors whitespace-nowrap shrink-0"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>{locale === 'vi' ? 'Đặt lại mẫu' : 'Reset template'}</span>
+            <span>{locale === 'vi' ? 'Khôi phục mẫu' : 'Reset template'}</span>
           </button>
         )}
       </div>

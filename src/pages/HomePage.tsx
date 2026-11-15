@@ -38,17 +38,17 @@ export function HomePage() {
             <div className="space-y-4">
               <p className="text-xs font-medium text-amber-700 dark:text-amber-400 tracking-wide">
                 {locale === 'vi'
-                  ? 'Học thuật toán bài bản · Chấm bài tự động C++17 & Python 3'
+                  ? 'Học lập trình từ con số 0 · Chấm bài tự động'
                   : 'Structured Algorithms Curriculum · Automated C++17 & Python 3 Judge'}
               </p>
               <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-white leading-[1.12] font-display text-balance max-w-2xl">
                 {locale === 'vi'
-                  ? 'Làm chủ lập trình thi đấu từ Cấp 0 đến Chuyên gia'
+                  ? 'Học lập trình thi đấu dễ hiểu từ cơ bản đến nâng cao'
                   : 'Master Competitive Programming from Level 0 to Grandmaster'}
               </h1>
               <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
                 {locale === 'vi'
-                  ? `DuckOJ kết hợp ${totalLessons} bài học có đồ thị tiên quyết rõ ràng, hàng trăm bài tập phân tầng từ Codeforces, CSES, AtCoder cùng ${totalNative} bài tập chấm trực tiếp tự động.`
+                  ? `${totalLessons} bài học theo trình tự rõ ràng, bài tập chọn lọc và ${totalNative} bài nộp code chấm ngay trên web.`
                   : `DuckOJ pairs ${totalLessons} structured lessons in an acyclic skill tree with curated Codeforces, CSES, and AtCoder problems plus ${totalNative} native automated judge tasks.`}
               </p>
             </div>
@@ -82,18 +82,18 @@ export function HomePage() {
           <div className="lg:col-span-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 p-6 flex flex-col justify-between gap-6">
             <div>
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
-                {locale === 'vi' ? 'Kiến trúc học tập DuckOJ' : 'DuckOJ Learning Architecture'}
+                {locale === 'vi' ? 'Bạn nhận được gì ở DuckOJ?' : 'DuckOJ Learning Architecture'}
               </h2>
               <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
                 <div className="flex items-start gap-3">
                   <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-slate-900 dark:text-slate-100">
-                      {locale === 'vi' ? 'Giáo trình 8 phần & Trắc nghiệm' : '8-Section Theory & Graded Quiz'}
+                      {locale === 'vi' ? 'Bài học ngắn gọn, dễ hiểu' : '8-Section Theory & Graded Quiz'}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {locale === 'vi'
-                        ? 'Mục tiêu, lý thuyết KaTeX, code mẫu C++17, bẫy thường gặp và trắc nghiệm củng cố.'
+                        ? 'Lý thuyết kèm ví dụ C++17, lỗi hay gặp và câu hỏi ôn bài.'
                         : 'Objectives, KaTeX theory, runnable C++17 samples, pitfalls, and quiz checks.'}
                     </p>
                   </div>
@@ -102,11 +102,11 @@ export function HomePage() {
                   <Cpu className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-slate-900 dark:text-slate-100">
-                      {locale === 'vi' ? 'Chấm bài tự động theo thời gian thực' : 'Sandbox Judge & Real-Time Streaming'}
+                      {locale === 'vi' ? 'Nộp code & chấm từng test ngay' : 'Sandbox Judge & Real-Time Streaming'}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {locale === 'vi'
-                        ? 'Chấm từng test tức thì với so khớp token, từng dòng, sai số thực và trình chấm đa nghiệm.'
+                        ? 'Hỗ trợ C++17 và Python 3, báo rõ sai ở test nào.'
                         : 'Live test-by-test verdicts with tokens, lines, float tolerance, and custom checkers.'}
                     </p>
                   </div>
@@ -115,11 +115,11 @@ export function HomePage() {
                   <Trophy className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-slate-900 dark:text-slate-100">
-                      {locale === 'vi' ? 'Kỳ thi chuẩn ICPC & Gợi ý 4 tầng' : 'ICPC Contests & 4-Tier Progressive Hints'}
+                      {locale === 'vi' ? 'Kỳ thi tính giờ & gợi ý từng bước' : 'ICPC Contests & 4-Tier Progressive Hints'}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {locale === 'vi'
-                        ? 'Bảng xếp hạng tính điểm phạt thời gian thực và gợi ý mở khóa theo số lần thử.'
+                        ? 'Thi thử có bảng xếp hạng và gợi ý mở dần khi cần.'
                         : 'Live ICPC penalty standings and anti-spoil progressive hint unlocking.'}
                     </p>
                   </div>
@@ -128,7 +128,7 @@ export function HomePage() {
             </div>
 
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span>{locale === 'vi' ? 'Thử bài chấm trực tiếp ngay:' : 'Try live judge now:'}</span>
+              <span>{locale === 'vi' ? 'Làm thử bài đầu tiên:' : 'Try live judge now:'}</span>
               <a
                 href="/problems/nat-sum-diff"
                 onClick={(e) => {
@@ -149,19 +149,19 @@ export function HomePage() {
             <div>
               <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">7</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {locale === 'vi' ? 'Chặng lộ trình từ Cấp 0 đến Cấp 6' : 'Progressive Curriculum Tracks'}
+                {locale === 'vi' ? 'Chặng học từ Cấp 0 đến Cấp 6' : 'Progressive Curriculum Tracks'}
               </p>
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">{totalLessons}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {locale === 'vi' ? 'Bài học' : 'Lessons'}
+                {locale === 'vi' ? 'Bài học hướng dẫn' : 'Lessons'}
               </p>
             </div>
             <div>
               <p className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums font-display">{totalNative}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {locale === 'vi' ? 'Bài tập chấm trực tiếp tại DuckOJ' : 'Native Automated Judge Problems'}
+                {locale === 'vi' ? 'Bài chấm ngay trên web' : 'Native Automated Judge Problems'}
               </p>
             </div>
             <div>
@@ -169,7 +169,7 @@ export function HomePage() {
                 {totalProblems || 310}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {locale === 'vi' ? 'Tổng bài tập thực hành đã kiểm duyệt' : 'Published Practice Problems'}
+                {locale === 'vi' ? 'Tổng số bài tập' : 'Published Practice Problems'}
               </p>
             </div>
           </div>
@@ -181,11 +181,11 @@ export function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-display">
-              {locale === 'vi' ? '7 chặng lộ trình học tập' : '7 Curriculum Tracks'}
+              {locale === 'vi' ? 'Lộ trình 7 chặng' : '7 Curriculum Tracks'}
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
               {locale === 'vi'
-                ? 'Đi tuần tự từ cú pháp C++17 đến các cấu trúc dữ liệu và thuật toán thi đấu chuyên sâu.'
+                ? 'Học từ những dòng code C++ đầu tiên đến các thuật toán nâng cao.'
                 : 'Progress systematically from C++17 fundamentals to advanced competitive algorithms.'}
             </p>
           </div>
@@ -200,7 +200,7 @@ export function HomePage() {
             <Code2 className="w-4 h-4" />
             <span>
               {locale === 'vi'
-                ? `Xem ${totalNative} bài chấm trực tiếp`
+                ? `Xem ${totalNative} bài chấm trên web`
                 : `Browse ${totalNative} Native Judge Problems`}
             </span>
           </a>

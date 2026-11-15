@@ -31,13 +31,15 @@ const CPP_TYPES = new Set([
  */
 export function validateCppSyntax(source: string): string | null {
   const lines = source.split(/\r?\n/);
-  const stack: { ch: string; line: number }[] = [];
+  const stack: { ch: string; line: number; isInit?: boolean; isControl?: boolean }[] = [];
   let inBlockComment = false;
   let hasMain = false;
+  let prevNonWs = '';
+  let prevIdent = '';
 
   for (let i = 0; i < lines.length; i++) {
     const lineNum = i + 1;
-    let line = lines[i];
+    const line = lines[i];
 
     // Strip block comments and line comments carefully while tracking strings
     let clean = '';
@@ -91,8 +93,10 @@ export function validateCppSyntax(source: string): string | null {
 
     if (/\bmain\s*\(/.test(trimmed)) hasMain = true;
 
-    // Bracket balancing check
+    // Bracket balancing & multi-line expression context tracking
     inStr = null;
+    let closedControlHeaderOnLine = false;
+    let curIdent = '';
     for (let j = 0; j < trimmed.length; j++) {
       const ch = trimmed[j];
       if (inStr) {
@@ -102,21 +106,79 @@ export function validateCppSyntax(source: string): string | null {
       }
       if (ch === '"' || ch === "'") {
         inStr = ch;
+        curIdent = '';
+        prevNonWs = ch;
+        prevIdent = '';
         continue;
       }
+      if (/[a-zA-Z0-9_]/.test(ch)) {
+        curIdent += ch;
+        prevNonWs = ch;
+        continue;
+      }
+      if (curIdent) {
+        prevIdent = curIdent;
+        curIdent = '';
+      }
+      if (/\s/.test(ch)) continue;
+
       if (ch === '(' || ch === '{' || ch === '[') {
-        stack.push({ ch, line: lineNum });
+        if (ch === '(') {
+          const isControl =
+            prevIdent === 'if' ||
+            prevIdent === 'for' ||
+            prevIdent === 'while' ||
+            prevIdent === 'switch' ||
+            prevIdent === 'catch';
+          stack.push({ ch, line: lineNum, isControl });
+        } else if (ch === '{') {
+          const isInit =
+            prevNonWs === '=' ||
+            prevNonWs === '(' ||
+            prevNonWs === '[' ||
+            prevNonWs === ',' ||
+            prevNonWs === '{' ||
+            prevNonWs === '?' ||
+            prevNonWs === ':' ||
+            prevNonWs === '>' ||
+            prevIdent === 'return';
+          stack.push({ ch, line: lineNum, isInit });
+        } else {
+          stack.push({ ch, line: lineNum });
+        }
       } else if (ch === ')' || ch === '}' || ch === ']') {
         const expected = ch === ')' ? '(' : ch === '}' ? '{' : '[';
         const top = stack.pop();
         if (!top || top.ch !== expected) {
           return `main.cpp:${lineNum}: error: extraneous closing '${ch}'`;
         }
+        if (ch === ')' && top.isControl) {
+          closedControlHeaderOnLine = true;
+        }
+      }
+
+      prevNonWs = ch;
+      prevIdent = '';
+    }
+    if (curIdent) {
+      prevIdent = curIdent;
+    }
+
+    // Check if the current line sits inside an unclosed (...), [...], or brace initializer {...}
+    let insideMultiLineExprOrInit = false;
+    for (let k = stack.length - 1; k >= 0; k--) {
+      const frame = stack[k];
+      if (frame.ch === '(' || frame.ch === '[' || (frame.ch === '{' && frame.isInit)) {
+        insideMultiLineExprOrInit = true;
+        break;
+      }
+      if (frame.ch === '{' && !frame.isInit) {
+        break;
       }
     }
 
     // Check obvious missing semicolon on single-line statements
-    // (Skip lines ending with ; { } , : \ or control headers / continuation lines)
+    // (Skip lines ending with ; { } , : \ or control headers / continuation / multi-line expressions)
     const lastChar = trimmed[trimmed.length - 1];
     const isControlHeader = /^(if|else|for|while|switch|do|struct|class|namespace|template|public:|private:|protected:)\b/.test(
       trimmed
@@ -148,6 +210,8 @@ export function validateCppSyntax(source: string): string | null {
       lastChar !== '}' &&
       lastChar !== ',' &&
       lastChar !== ':' &&
+      !insideMultiLineExprOrInit &&
+      !closedControlHeaderOnLine &&
       !isControlHeader &&
       !isOperatorContinuation &&
       !nextStartsBlockOrChain &&
@@ -839,6 +903,9 @@ function translateExpr(expr: string, ctx: VarContext): string {
     return id;
   });
 
+  // Normalize multi-line C++ expression whitespace safely while strings/chars are masked
+  s = s.replace(/\s+/g, ' ').trim();
+
   // Remove C++ integer suffixes: 1LL, 1000LL, 1ULL
   s = s.replace(/\b(\d+)[uUlL]+\b/g, '$1');
   // Scientific notation 1e9, 4e18 -> int if inside integer expressions
@@ -992,6 +1059,7 @@ function translateExpr(expr: string, ctx: VarContext): string {
   // Actually in Python 3, a / b returns float! If C++ does `n / 2` or `mid = (l + r) / 2`, we MUST use integer division when needed!
   // Let's rewrite `lhs / rhs` into `_cdiv(lhs, rhs)` unless float type is involved!
   s = rewriteSlashDiv(s, ctx);
+  s = s.replace(/\s+/g, ' ').trim();
 
   // Restore char literals: if used in arithmetic like `c - __CHR_0__` or `__CHR_0__ + k`, wrap in ord(...)
   s = s.replace(/__CHR_(\d+)__/g, (_m, idxStr, offset) => {
@@ -1007,7 +1075,7 @@ function translateExpr(expr: string, ctx: VarContext): string {
   // Restore string literals
   s = s.replace(/__STR_(\d+)__/g, (_m, idxStr) => strLiterals[Number(idxStr)]);
 
-  return s.replace(/ {2,}/g, ' ').trim();
+  return s.trim();
 }
 
 function rewriteSlashDiv(expr: string, ctx: VarContext): string {
@@ -1367,7 +1435,8 @@ function translateVarDecl(stmt: string, ctx: VarContext, ind: string): string[] 
       ctx.types.set(vName, baseKind);
       ctx.locals?.add(vName);
       if (valRaw.startsWith('{') && valRaw.endsWith('}')) {
-        lines.push(`${ind}${vName} = [${translateExpr(valRaw.slice(1, -1), ctx)}]`);
+        const elems = `[${translateExpr(valRaw.slice(1, -1), ctx)}]`;
+        lines.push(`${ind}${vName} = ${isVectorKind(baseKind) ? `_CppVec(${elems})` : elems}`);
       } else {
         const rhsPy = translateValueExpr(valRaw, ctx, baseKind);
         lines.push(`${ind}${vName} = ${rhsPy}`);
@@ -1531,13 +1600,19 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
     const condRaw = trimmed.slice(pStart + 1, pEnd).trim();
     const rest = trimmed.slice(pEnd + 1).trim();
 
-    // Check `if (cin >> x)`
-    const cinCond = condRaw.match(/^cin\s*>>\s*(.+)$/);
-    if (cinCond) {
-      const vars = cinCond[1].split('>>').map((v) => v.trim());
-      const readLines = vars.map((v) => translateReadTarget(v, ctx, ind));
-      const bodyLines = translateStatement(rest, ctx, ind + '    ');
-      return [...readLines, `${ind}if ${vars[0]} is not None:`, ...(bodyLines.length ? bodyLines : [`${ind}    pass`])];
+    // Check `if (cin >> x)` / `if (cin >> a >> b)` / `if (cin >> a && cin >> b)` (including multi-line)
+    const cinCondParts = condRaw.trim().split(/\s*&&\s*/);
+    if (cinCondParts.length > 0 && cinCondParts.every((part) => /^cin\s*>>/s.test(part))) {
+      const vars = cinCondParts
+        .flatMap((part) => part.replace(/^cin\s*>>/s, '').split('>>'))
+        .map((v) => v.trim())
+        .filter(Boolean);
+      if (vars.length > 0) {
+        const readLines = vars.map((v) => translateReadTarget(v, ctx, ind));
+        const bodyLines = translateStatement(rest, ctx, ind + '    ');
+        const condCheck = vars.map((v) => `${translateExpr(v, ctx)} is not None`).join(' and ');
+        return [...readLines, `${ind}if ${condCheck}:`, ...(bodyLines.length ? bodyLines : [`${ind}    pass`])];
+      }
     }
 
     const incExt = extractEmbeddedIncDec(condRaw, ctx, ind);
@@ -1570,6 +1645,26 @@ function translateStatement(stmt: string, ctx: VarContext, ind: string): string[
       const v = decMatch[1];
       const bodyLines = translateStatement(bodyRaw, ctx, ind + '    ');
       return [`${ind}for _ in range(int(${v})):`, ...(bodyLines.length ? bodyLines : [`${ind}    pass`])];
+    }
+
+    // `while (cin >> a >> b)` or `while (cin >> a && cin >> b)`
+    const whileCinParts = condRaw.trim().split(/\s*&&\s*/);
+    if (whileCinParts.length > 0 && whileCinParts.every((part) => /^cin\s*>>/s.test(part))) {
+      const vars = whileCinParts
+        .flatMap((part) => part.replace(/^cin\s*>>/s, '').split('>>'))
+        .map((v) => v.trim())
+        .filter(Boolean);
+      if (vars.length > 0) {
+        const readLines = vars.map((v) => translateReadTarget(v, ctx, ind + '    '));
+        const bodyLines = translateStatement(bodyRaw, ctx, ind + '    ');
+        const eofCheck = vars.map((v) => `${translateExpr(v, ctx)} is None`).join(' or ');
+        return [
+          `${ind}while True:`,
+          ...readLines,
+          `${ind}    if ${eofCheck}: break`,
+          ...bodyLines,
+        ];
+      }
     }
 
     // `while (ss >> w)`

@@ -7,7 +7,7 @@ function checkTokens(actual: string, expected: string): CheckerResult {
   if (actTokens.length !== expTokens.length) {
     return {
       verdict: 'WA',
-      message: `Số lượng token không khớp: nhận ${actTokens.length}, kỳ vọng ${expTokens.length}.`.slice(0, 500),
+      message: `Số lượng giá trị đầu ra chưa khớp: in ra ${actTokens.length}, đáp án có ${expTokens.length}.`.slice(0, 500),
     };
   }
 
@@ -15,12 +15,12 @@ function checkTokens(actual: string, expected: string): CheckerResult {
     if (actTokens[i] !== expTokens[i]) {
       return {
         verdict: 'WA',
-        message: `Sai tại token thứ ${i + 1}: nhận "${actTokens[i]}", kỳ vọng "${expTokens[i]}".`.slice(0, 500),
+        message: `Sai ở giá trị thứ ${i + 1}: in ra "${actTokens[i]}", đáp án là "${expTokens[i]}".`.slice(0, 500),
       };
     }
   }
 
-  return { verdict: 'AC', message: `Khớp ${expTokens.length} token.` };
+  return { verdict: 'AC', message: `Khớp đúng ${expTokens.length} giá trị.` };
 }
 
 function checkLines(actual: string, expected: string): CheckerResult {
@@ -35,7 +35,7 @@ function checkLines(actual: string, expected: string): CheckerResult {
   if (actLines.length !== expLines.length) {
     return {
       verdict: 'WA',
-      message: `Số dòng không khớp: nhận ${actLines.length}, kỳ vọng ${expLines.length}.`.slice(0, 500),
+      message: `Số dòng đầu ra chưa khớp: in ra ${actLines.length}, đáp án có ${expLines.length}.`.slice(0, 500),
     };
   }
 
@@ -43,12 +43,12 @@ function checkLines(actual: string, expected: string): CheckerResult {
     if (actLines[i] !== expLines[i]) {
       return {
         verdict: 'WA',
-        message: `Sai tại dòng ${i + 1}: nhận "${actLines[i]}", kỳ vọng "${expLines[i]}".`.slice(0, 500),
+        message: `Sai ở dòng ${i + 1}: in ra "${actLines[i]}", đáp án là "${expLines[i]}".`.slice(0, 500),
       };
     }
   }
 
-  return { verdict: 'AC', message: `Khớp ${expLines.length} dòng.` };
+  return { verdict: 'AC', message: `Khớp đúng ${expLines.length} dòng.` };
 }
 
 function checkFloat(actual: string, expected: string, eps = 1e-6): CheckerResult {
@@ -58,7 +58,7 @@ function checkFloat(actual: string, expected: string, eps = 1e-6): CheckerResult
   if (actTokens.length !== expTokens.length) {
     return {
       verdict: 'WA',
-      message: `Số lượng token không khớp: nhận ${actTokens.length}, kỳ vọng ${expTokens.length}.`.slice(0, 500),
+      message: `Số lượng giá trị đầu ra chưa khớp: in ra ${actTokens.length}, đáp án có ${expTokens.length}.`.slice(0, 500),
     };
   }
 
@@ -70,42 +70,42 @@ function checkFloat(actual: string, expected: string, eps = 1e-6): CheckerResult
       if (!numRegex.test(a)) {
         return {
           verdict: 'WA',
-          message: `Token thứ ${i + 1} không phải số hợp lệ: "${a}".`.slice(0, 500),
+          message: `Giá trị thứ ${i + 1} không phải số hợp lệ: "${a}".`.slice(0, 500),
         };
       }
       const av = Number(a);
       const ev = Number(e);
       if (!Number.isFinite(av) || !Number.isFinite(ev)) {
-        return { verdict: 'WA', message: `Giá trị NaN/Inf tại token ${i + 1}.` };
+        return { verdict: 'WA', message: `Giá trị không hợp lệ (NaN/Inf) ở vị trí ${i + 1}.` };
       }
       const tol = eps * Math.max(1, Math.abs(ev));
       if (Math.abs(av - ev) > tol) {
         return {
           verdict: 'WA',
-          message: `Sai số vượt ngưỡng ${eps} tại token thứ ${i + 1}: nhận ${a}, kỳ vọng ${e}.`.slice(0, 500),
+          message: `Sai số vượt mức ${eps} ở vị trí ${i + 1}: in ra ${a}, đáp án là ${e}.`.slice(0, 500),
         };
       }
     } else if (a !== e) {
       return {
         verdict: 'WA',
-        message: `Sai tại token thứ ${i + 1}: nhận "${a}", kỳ vọng "${e}".`.slice(0, 500),
+        message: `Sai ở vị trí ${i + 1}: in ra "${a}", đáp án là "${e}".`.slice(0, 500),
       };
     }
   }
 
-  return { verdict: 'AC', message: `Đạt sai số cho phép (ngưỡng ${eps}).` };
+  return { verdict: 'AC', message: `Đúng trong mức sai số ${eps}.` };
 }
 
 function checkEqualRowSums(input: string, actual: string): CheckerResult {
   const n = Number.parseInt(input.trim().split(/\s+/)[0] || '', 10);
   if (!Number.isInteger(n) || n < 1) {
-    return { verdict: 'SE', message: 'Dữ liệu đầu vào của trình chấm không hợp lệ.' };
+    return { verdict: 'SE', message: 'Dữ liệu đầu vào kiểm tra không hợp lệ.' };
   }
   const tokens = actual.trim() ? actual.trim().split(/\s+/) : [];
   if (tokens.length !== n * n) {
     return {
       verdict: 'WA',
-      message: `Ma trận phải gồm đúng ${n * n} số nguyên, nhận được ${tokens.length}.`.slice(0, 500),
+      message: `Ma trận cần đúng ${n * n} số nguyên, nhưng nhận được ${tokens.length}.`.slice(0, 500),
     };
   }
   const seen = new Uint8Array(n * n + 1);
@@ -116,7 +116,7 @@ function checkEqualRowSums(input: string, actual: string): CheckerResult {
     }
     const v = Number.parseInt(t, 10);
     if (v < 1 || v > n * n) {
-      return { verdict: 'WA', message: `Giá trị ${v} nằm ngoài [1, ${n * n}].`.slice(0, 500) };
+      return { verdict: 'WA', message: `Giá trị ${v} nằm ngoài đoạn [1, ${n * n}].`.slice(0, 500) };
     }
     if (seen[v]) {
       return { verdict: 'WA', message: `Số ${v} bị lặp lại trong ma trận.`.slice(0, 500) };
@@ -136,7 +136,7 @@ function checkEqualRowSums(input: string, actual: string): CheckerResult {
       };
     }
   }
-  return { verdict: 'AC', message: `Hoán vị hợp lệ với tổng mỗi hàng = ${targetSum}.` };
+  return { verdict: 'AC', message: `Hợp lệ — tổng mỗi hàng đều bằng ${targetSum}.` };
 }
 
 export function runChecker(
@@ -156,15 +156,15 @@ export function runChecker(
       case 'custom': {
         const cid = config.params?.custom_id || 'equal_row_sums';
         if (cid === 'equal_row_sums') return checkEqualRowSums(input, actual);
-        return { verdict: 'SE', message: `Trình chấm tùy biến "${cid}" chưa được hỗ trợ.` };
+        return { verdict: 'SE', message: `Kiểu chấm riêng "${cid}" chưa được hỗ trợ.` };
       }
       default:
-        return { verdict: 'SE', message: 'Loại trình chấm không xác định.' };
+        return { verdict: 'SE', message: 'Kiểu chấm không hợp lệ.' };
     }
   } catch (err) {
     return {
       verdict: 'SE',
-      message: `Lỗi trình chấm: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500),
+      message: `Lỗi hệ thống chấm: ${err instanceof Error ? err.message : String(err)}`.slice(0, 500),
     };
   }
 }

@@ -86,7 +86,7 @@ export function HighlightedCodeBlock({
           </div>
         )}
 
-        <pre className="m-0 py-3.5 px-4 font-mono whitespace-pre flex-1 min-w-0">
+        <pre className="m-0 py-3.5 px-4 font-mono whitespace-pre flex-1 min-w-max">
           <code>
             {tokenLines.map((lineTokens, lineIdx) => (
               <span key={lineIdx} className="block">

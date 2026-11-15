@@ -42,7 +42,7 @@ export function VerdictBadge({
     { label: string; color: string; Icon: React.ComponentType<{ className?: string }> }
   > = {
     AC: {
-      label: compact ? 'AC' : vi ? 'AC · Chính xác' : 'AC · Accepted',
+      label: compact ? 'AC' : vi ? 'AC · Đúng' : 'AC · Accepted',
       color: 'text-emerald-700 dark:text-emerald-400',
       Icon: CheckCircle2,
     },
@@ -62,17 +62,17 @@ export function VerdictBadge({
       Icon: Cpu,
     },
     RE: {
-      label: compact ? 'RE' : vi ? 'RE · Lỗi thực thi' : 'RE · Runtime Error',
+      label: compact ? 'RE' : vi ? 'RE · Lỗi khi chạy' : 'RE · Runtime Error',
       color: 'text-orange-700 dark:text-orange-400',
       Icon: AlertTriangle,
     },
     CE: {
-      label: compact ? 'CE' : vi ? 'CE · Lỗi biên dịch' : 'CE · Compile Error',
+      label: compact ? 'CE' : vi ? 'CE · Lỗi cú pháp' : 'CE · Compile Error',
       color: 'text-slate-700 dark:text-slate-300',
       Icon: Terminal,
     },
     OLE: {
-      label: compact ? 'OLE' : vi ? 'OLE · Quá đầu ra' : 'OLE · Output Limit',
+      label: compact ? 'OLE' : vi ? 'OLE · In quá nhiều' : 'OLE · Output Limit',
       color: 'text-amber-700 dark:text-amber-400',
       Icon: FileWarning,
     },

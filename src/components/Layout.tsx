@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Globe, LogOut, Menu, Moon, ShieldCheck, Sun, User, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatRole } from '../lib/i18n';
@@ -9,6 +9,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!accountOpen && !mobileOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (accountOpen && accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setAccountOpen(false);
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [accountOpen, mobileOpen]);
 
   const navItems = [
     { href: '/roadmap', label: t.navRoadmap },
@@ -83,7 +105,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
 
             {user ? (
-              <div className="relative">
+              <div className="relative" ref={accountMenuRef}>
                 <button
                   type="button"
                   onClick={() => setAccountOpen((o) => !o)}
@@ -224,7 +246,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span aria-hidden="true">·</span>
             <span>
               {locale === 'vi'
-                ? 'Nền tảng học lập trình thi đấu & máy chấm trực tuyến'
+                ? 'Học lập trình thi đấu & chấm bài tự động'
                 : 'Competitive Programming Learning & Online Judge'}
             </span>
           </div>

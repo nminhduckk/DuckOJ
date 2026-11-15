@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { compileCpp17 } from './cppTranspiler';
 import type { JudgeLanguage, RunLimits, SandboxRunResult } from './types';
 
 const SANDBOX_HARNESS = `
-import os, sys, resource, time, socket, builtins, subprocess
+import os, sys, io, resource, time, socket, builtins, subprocess
 
 _BOX_DIR = os.path.realpath(os.getcwd())
 _TL_S = float(os.environ.get("DUCK_TL_S", "1.0"))
@@ -48,6 +48,7 @@ def _guarded_open(file, mode='r', *args, **kwargs):
     return _orig_open(file, mode, *args, **kwargs)
 
 builtins.open = _guarded_open
+io.open = _guarded_open
 
 class _BlockedSocket:
     def __init__(self, *args, **kwargs):
@@ -60,6 +61,18 @@ if hasattr(os, 'fork'):
     os.fork = lambda *a, **kw: (_ for _ in ()).throw(PermissionError("Sandbox blocked fork"))
 if hasattr(os, 'system'):
     os.system = lambda *a, **kw: (_ for _ in ()).throw(PermissionError("Sandbox blocked system"))
+if hasattr(os, 'popen'):
+    os.popen = lambda *a, **kw: (_ for _ in ()).throw(PermissionError("Sandbox blocked popen"))
+
+class _BlockedPopen:
+    def __init__(self, *args, **kwargs):
+        raise PermissionError("Sandbox blocked subprocess")
+
+subprocess.Popen = _BlockedPopen
+subprocess.run = lambda *a, **kw: (_ for _ in ()).throw(PermissionError("Sandbox blocked subprocess"))
+subprocess.call = lambda *a, **kw: (_ for _ in ()).throw(PermissionError("Sandbox blocked subprocess"))
+subprocess.check_call = lambda *a, **kw: (_ for _ in ()).throw(PermissionError("Sandbox blocked subprocess"))
+subprocess.check_output = lambda *a, **kw: (_ for _ in ()).throw(PermissionError("Sandbox blocked subprocess"))
 
 # Measure child memory accurately via /proc/self/status (immune to gVisor fork ru_maxrss inheritance)
 def _read_proc_mem_kb():
@@ -134,7 +147,35 @@ export function prepareProgram(language: JudgeLanguage, sourceCode: string): Pre
       language,
     };
   }
-  // Python 3: syntax validation via basic check before execution
+  const check = spawnSync(
+    '/usr/bin/python3',
+    [
+      '-c',
+      [
+        'import sys',
+        'try:',
+        '    compile(sys.stdin.read(), "main.py", "exec")',
+        'except SyntaxError as e:',
+        '    sys.stderr.write(f"main.py:{e.lineno}: {type(e).__name__}: {e.msg}\\n")',
+        '    if e.text:',
+        '        sys.stderr.write(e.text.rstrip() + "\\n")',
+        '    sys.exit(1)',
+      ].join('\n'),
+    ],
+    {
+      input: sourceCode,
+      encoding: 'utf8',
+      timeout: 3000,
+    }
+  );
+  if (check.status !== 0) {
+    return {
+      ok: false,
+      compileLog: (check.stderr || check.error?.message || 'SyntaxError').trim().slice(0, 4000),
+      pythonCode: '',
+      language,
+    };
+  }
   return {
     ok: true,
     compileLog: '',

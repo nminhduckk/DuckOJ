@@ -52,19 +52,19 @@ export function classifyVerdict(
   const memory_kb = Math.max(meta.maxRss, meta.cgMem);
 
   if (meta.status === 'XX') {
-    return { verdict: 'SE', time_ms, memory_kb, reason: meta.message || 'Lỗi nội bộ máy chấm (XX)' };
+    return { verdict: 'SE', time_ms, memory_kb, reason: meta.message || 'Lỗi hệ thống chấm' };
   }
 
   if (meta.cgOomKilled || memory_kb >= memoryLimitMb * 1024) {
-    return { verdict: 'MLE', time_ms, memory_kb, reason: 'Vượt quá giới hạn bộ nhớ' };
+    return { verdict: 'MLE', time_ms, memory_kb, reason: 'Vượt quá bộ nhớ cho phép' };
   }
 
   if (meta.exitsig === 25 || stdoutTruncated) {
-    return { verdict: 'OLE', time_ms, memory_kb, reason: 'Vượt quá giới hạn đầu ra (SIGXFSZ)' };
+    return { verdict: 'OLE', time_ms, memory_kb, reason: 'In ra quá nhiều dữ liệu' };
   }
 
   if (meta.status === 'TO' || time_ms > timeLimitMs) {
-    return { verdict: 'TLE', time_ms, memory_kb, reason: 'Vượt quá giới hạn thời gian' };
+    return { verdict: 'TLE', time_ms, memory_kb, reason: 'Chạy quá thời gian cho phép' };
   }
 
   if (meta.status === 'SG' || meta.status === 'RE' || meta.exitcode !== 0 || meta.exitsig !== 0) {
@@ -74,9 +74,9 @@ export function classifyVerdict(
       memory_kb,
       reason:
         meta.message ||
-        (meta.exitsig ? `Bị ngắt bởi tín hiệu ${meta.exitsig}` : `Mã thoát khác 0 (${meta.exitcode})`),
+        (meta.exitsig ? `Chương trình bị dừng (tín hiệu ${meta.exitsig})` : `Chương trình thoát với mã lỗi ${meta.exitcode}`),
     };
   }
 
-  return { verdict: 'OK', time_ms, memory_kb, reason: 'Chạy hoàn tất' };
+  return { verdict: 'OK', time_ms, memory_kb, reason: 'Chạy xong' };
 }

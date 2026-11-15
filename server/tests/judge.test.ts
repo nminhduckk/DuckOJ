@@ -267,4 +267,126 @@ int main() {
       `Selftest failed (${report.passedCount}/${report.totalCount}): ${JSON.stringify(failures)}`
     );
   });
+
+  it('returns CE for Python 3 syntax errors and supports multi-line C++ brace initializers and conditions', async () => {
+    const badPy = prepareProgram('python3', 'def solve():\n    x = (\nprint(1)\n');
+    assert.equal(badPy.ok, false);
+    assert.match(badPy.compileLog, /SyntaxError/);
+
+    const goodPy = prepareProgram('python3', 'a, b = map(int, input().split())\nprint(a + b)\n');
+    assert.equal(goodPy.ok, true);
+
+    const multiLineCpp = prepareProgram(
+      'cpp17',
+      `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    vector<long long> nums = {
+        10,
+        20,
+        30
+    };
+    long long s = 0;
+    for (long long x : nums) {
+        if (
+            x > 0 &&
+            x <= 100
+        ) {
+            s += x;
+        }
+    }
+    cout << s << "\\n";
+    return 0;
+}`
+    );
+    assert.equal(multiLineCpp.ok, true, `Multi-line C++ failed compile: ${multiLineCpp.compileLog}`);
+    const run = await runInSandbox(multiLineCpp, '', {
+      time_ms: 1000,
+      memory_mb: 256,
+      output_kb: 65536,
+    });
+    assert.equal(run.meta.exitcode, 0, run.stderr);
+    assert.equal(run.stdout.trim(), '60');
+
+    const cinChainCpp = prepareProgram(
+      'cpp17',
+      `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    long long a, b;
+    if (cin >> a &&
+        cin >> b) {
+        vector<long long> nums = {
+            a + b,
+            a - b
+        };
+        cout << nums[0] << " " << nums[1] << "\\n";
+    }
+    return 0;
+}`
+    );
+    assert.equal(cinChainCpp.ok, true, `cinChainCpp failed compile: ${cinChainCpp.compileLog}`);
+    const cinRun = await runInSandbox(cinChainCpp, '7 3\n', {
+      time_ms: 1000,
+      memory_mb: 256,
+      output_kb: 65536,
+    });
+    assert.equal(cinRun.meta.exitcode, 0, cinRun.stderr);
+    assert.equal(cinRun.stdout.trim(), '10 4');
+
+    const whileCinCpp = prepareProgram(
+      'cpp17',
+      `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    long long x, y;
+    long long total = 0;
+    while (cin >> x >> y) {
+        total += x + y;
+    }
+    cout << total << "\\n";
+    return 0;
+}`
+    );
+    assert.equal(whileCinCpp.ok, true, `whileCinCpp failed compile: ${whileCinCpp.compileLog}`);
+    const whileRun = await runInSandbox(whileCinCpp, '1 2\n3 4\n', {
+      time_ms: 1000,
+      memory_mb: 256,
+      output_kb: 65536,
+    });
+    assert.equal(whileRun.meta.exitcode, 0, whileRun.stderr);
+    assert.equal(whileRun.stdout.trim(), '10');
+  });
+
+  it('sandbox blocks io.open outside box, os.popen, and subprocess execution', async () => {
+    const prog = prepareProgram(
+      'python3',
+      `import io, os, subprocess
+results = []
+for fn in (
+    lambda: io.open('/etc/passwd', 'r').read(),
+    lambda: os.popen('id').read(),
+    lambda: subprocess.run(['id']),
+    lambda: subprocess.Popen(['id']),
+):
+    try:
+        fn()
+        results.append('allowed')
+    except PermissionError:
+        results.append('blocked')
+print(','.join(results))
+`
+    );
+    assert.equal(prog.ok, true);
+    const run = await runInSandbox(prog, '', {
+      time_ms: 1000,
+      memory_mb: 128,
+      output_kb: 1024,
+    });
+    assert.equal(run.meta.exitcode, 0, run.stderr);
+    assert.equal(run.stdout.trim(), 'blocked,blocked,blocked,blocked');
+  });
 });

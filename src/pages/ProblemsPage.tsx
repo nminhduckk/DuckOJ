@@ -101,12 +101,12 @@ export function ProblemsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display">
-            {locale === 'vi' ? 'Kho bài tập DuckOJ' : 'DuckOJ Problem Archive'}
+            {locale === 'vi' ? 'Kho bài tập' : 'DuckOJ Problem Archive'}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 tabular-nums">
             {data
               ? locale === 'vi'
-                ? `Hiển thị ${data.total} bài tập (${data.facets.kinds.native} bài chấm trực tiếp · ${data.facets.kinds.external} bài nguồn ngoài)`
+                ? `${data.total} bài tập (${data.facets.kinds.native} chấm trên web · ${data.facets.kinds.external} nguồn ngoài)`
                 : `Showing ${data.total} problems (${data.facets.kinds.native} native · ${data.facets.kinds.external} external)`
               : locale === 'vi'
                 ? 'Đang tải danh sách bài tập...'
@@ -182,7 +182,7 @@ export function ProblemsPage() {
             onChange={(e) => updateFilter({ level: e.target.value })}
             className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100"
           >
-            <option value="">{locale === 'vi' ? 'Mọi cấp độ' : 'All levels'}</option>
+            <option value="">{locale === 'vi' ? 'Mọi cấp' : 'All levels'}</option>
             {[0, 1, 2, 3, 4, 5, 6].map((lv) => (
               <option key={lv} value={String(lv)}>
                 {locale === 'vi' ? `Cấp ${lv}` : `Level ${lv}`}
@@ -201,7 +201,7 @@ export function ProblemsPage() {
               <option key={s} value={s}>
                 {s === 'Native'
                   ? locale === 'vi'
-                    ? 'DuckOJ (Chấm trực tiếp)'
+                    ? 'DuckOJ (Chấm trên web)'
                     : 'DuckOJ Judge'
                   : s === 'Other'
                     ? locale === 'vi'
@@ -213,12 +213,12 @@ export function ProblemsPage() {
           </select>
 
           <select
-            aria-label={locale === 'vi' ? 'Lọc theo độ khó' : 'Filter by tier'}
+            aria-label={locale === 'vi' ? 'Lọc theo mức độ' : 'Filter by tier'}
             value={tier}
             onChange={(e) => updateFilter({ tier: e.target.value })}
             className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100"
           >
-            <option value="">{locale === 'vi' ? 'Mọi độ khó' : 'All tiers'}</option>
+            <option value="">{locale === 'vi' ? 'Mọi mức độ' : 'All tiers'}</option>
             {(['Khởi động', 'Luyện tập', 'Thử thách'] as const).map((tierVal) => (
               <option key={tierVal} value={tierVal}>
                 {formatTier(tierVal, locale)}
@@ -227,12 +227,12 @@ export function ProblemsPage() {
           </select>
 
           <select
-            aria-label={locale === 'vi' ? 'Lọc theo chuyên đề' : 'Filter by topic'}
+            aria-label={locale === 'vi' ? 'Lọc theo chủ đề' : 'Filter by topic'}
             value={topic}
             onChange={(e) => updateFilter({ topic: e.target.value })}
             className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100"
           >
-            <option value="">{locale === 'vi' ? 'Mọi chuyên đề' : 'All topics'}</option>
+            <option value="">{locale === 'vi' ? 'Mọi chủ đề' : 'All topics'}</option>
             {topics.map((tp) => (
               <option key={tp.slug} value={tp.slug}>
                 {formatTopic(tp.slug, tp.name_vi, locale)} ({tp.problem_count ?? 0})
@@ -241,12 +241,12 @@ export function ProblemsPage() {
           </select>
 
           <select
-            aria-label={locale === 'vi' ? 'Lọc theo trạng thái' : 'Filter by status'}
+            aria-label={locale === 'vi' ? 'Lọc theo tiến độ' : 'Filter by status'}
             value={status}
             onChange={(e) => updateFilter({ status: e.target.value })}
             className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100"
           >
-            <option value="">{locale === 'vi' ? 'Mọi trạng thái' : 'All statuses'}</option>
+            <option value="">{locale === 'vi' ? 'Mọi tiến độ' : 'All statuses'}</option>
             <option value="not_started">{t.probNotStarted}</option>
             <option value="attempted">{t.probAttempted}</option>
             <option value="solved">{t.probSolved}</option>
@@ -293,8 +293,8 @@ export function ProblemsPage() {
                 <tr>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Bài tập' : 'Problem'}</th>
                   <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Nguồn' : 'Source'}</th>
-                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Cấp / Độ khó' : 'Level / Tier'}</th>
-                  <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Trạng thái' : 'Status'}</th>
+                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Cấp / Mức độ' : 'Level / Tier'}</th>
+                  <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Tiến độ' : 'Status'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">

@@ -23,6 +23,7 @@ export function ContestDetailPage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionErr, setActionErr] = useState<string | null>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -51,22 +52,32 @@ export function ContestDetailPage({ slug }: { slug: string }) {
       return;
     }
     setJoining(true);
+    setActionErr(null);
     try {
       await apiFetch(`/contests/${encodeURIComponent(slug)}/join`, { method: 'POST' });
       await loadAll();
-    } catch {
-      // ignore
+    } catch (err) {
+      setActionErr(
+        err instanceof ApiError ? err.message : locale === 'vi' ? 'Không thể tham gia kỳ thi.' : 'Failed to join contest.'
+      );
     } finally {
       setJoining(false);
     }
   };
 
   const refreshStandings = async () => {
+    setActionErr(null);
     try {
       const st = await apiFetch<{ items: StandingRow[] }>(`/contests/${encodeURIComponent(slug)}/standings`);
       setStandings(st.items);
-    } catch {
-      // ignore
+    } catch (err) {
+      setActionErr(
+        err instanceof ApiError
+          ? err.message
+          : locale === 'vi'
+            ? 'Không thể làm mới bảng xếp hạng.'
+            : 'Failed to refresh standings.'
+      );
     }
   };
 
@@ -146,10 +157,10 @@ export function ContestDetailPage({ slug }: { slug: string }) {
               >
                 {joining
                   ? locale === 'vi'
-                    ? 'Đang ghi danh...'
+                    ? 'Đang tham gia...'
                     : 'Joining...'
                   : locale === 'vi'
-                    ? 'Đăng ký tham gia'
+                    ? 'Tham gia'
                     : 'Join Contest'}
               </button>
             )}
@@ -157,6 +168,9 @@ export function ContestDetailPage({ slug }: { slug: string }) {
         </div>
 
         <MarkdownRenderer content={contest.description_md} />
+        {actionErr && (
+          <p className="text-xs text-rose-600 dark:text-rose-400">{actionErr}</p>
+        )}
       </div>
 
       {/* Problems List */}
@@ -169,7 +183,7 @@ export function ContestDetailPage({ slug }: { slug: string }) {
             <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
             <span>
               {locale === 'vi'
-                ? `Đề bài sẽ được mở khóa tự động khi kỳ thi bắt đầu (${formatVnDateTime(contest.start_at)}).`
+                ? `Đề bài sẽ tự động mở khi đến giờ thi (${formatVnDateTime(contest.start_at)}).`
                 : `Problem statements are locked until contest start (${formatVnDateTime(contest.start_at)}).`}
             </span>
           </div>
@@ -216,7 +230,7 @@ export function ContestDetailPage({ slug }: { slug: string }) {
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white font-display">
-            {locale === 'vi' ? 'Bảng xếp hạng ICPC' : 'ICPC Standings'}
+            {locale === 'vi' ? 'Bảng xếp hạng' : 'ICPC Standings'}
           </h2>
           <button
             type="button"
@@ -231,15 +245,15 @@ export function ContestDetailPage({ slug }: { slug: string }) {
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-x-auto">
           {standings.length === 0 ? (
             <p className="p-6 text-sm text-slate-500 dark:text-slate-400">
-              {locale === 'vi' ? 'Chưa có thí sinh tham gia.' : 'No participants yet.'}
+              {locale === 'vi' ? 'Chưa có người tham gia.' : 'No participants yet.'}
             </p>
           ) : (
             <table className="w-full text-sm text-left border-collapse tabular-nums">
               <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 font-medium">#</th>
-                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Thí sinh' : 'Participant'}</th>
-                  <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Số bài giải được' : 'Solved'}</th>
+                  <th className="px-4 py-3 font-medium">{locale === 'vi' ? 'Thành viên' : 'Participant'}</th>
+                  <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Giải được' : 'Solved'}</th>
                   <th className="px-4 py-3 font-medium text-right">{locale === 'vi' ? 'Điểm phạt' : 'Penalty'}</th>
                   {(contest.problems || []).map((p) => (
                     <th key={p.label} className="px-3 py-3 font-mono font-semibold text-center">

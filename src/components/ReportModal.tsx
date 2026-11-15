@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { apiFetch, ApiError } from '../lib/api';
 import { useApp } from '../context/AppContext';
@@ -21,6 +21,23 @@ export function ReportModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setTargetType(defaultType);
+    setTargetId(defaultTargetId);
+    setError(null);
+    setSuccessId(null);
+  }, [open, defaultType, defaultTargetId]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -56,12 +73,12 @@ export function ReportModal({
       <div className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 id="report-modal-title" className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-            {locale === 'vi' ? 'Báo lỗi / Khiếu nại bản quyền' : 'Report Issue / Copyright'}
+            {locale === 'vi' ? 'Báo lỗi hoặc góp ý' : 'Report Issue / Copyright'}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label={locale === 'vi' ? 'Đóng hộp thoại' : 'Close dialog'}
+            aria-label={locale === 'vi' ? 'Đóng' : 'Close dialog'}
             className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <X className="w-5 h-5" />
@@ -72,7 +89,7 @@ export function ReportModal({
           <div className="space-y-4">
             <p className="text-sm text-emerald-700 dark:text-emerald-400">
               {locale === 'vi'
-                ? `Đã ghi nhận báo cáo #${successId}. Đội ngũ quản trị DuckOJ sẽ kiểm tra và xử lý sớm.`
+                ? `Đã gửi báo lỗi #${successId}. Cảm ơn bạn đã góp ý cho DuckOJ.`
                 : `Report #${successId} recorded. The DuckOJ team will review it shortly.`}
             </p>
             <div className="flex justify-end">
@@ -92,7 +109,7 @@ export function ReportModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="report-type" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                {locale === 'vi' ? 'Phân loại' : 'Category'}
+                {locale === 'vi' ? 'Loại góp ý' : 'Category'}
               </label>
               <select
                 id="report-type"
@@ -100,17 +117,17 @@ export function ReportModal({
                 onChange={(e) => setTargetType(e.target.value as any)}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
               >
-                <option value="problem">{locale === 'vi' ? 'Lỗi đề bài / link bài tập' : 'Problem / link error'}</option>
-                <option value="test">{locale === 'vi' ? 'Lỗi bộ test / trình chấm' : 'Test case / judge issue'}</option>
-                <option value="lesson">{locale === 'vi' ? 'Lỗi nội dung bài học' : 'Lesson content issue'}</option>
-                <option value="copyright">{locale === 'vi' ? 'Báo cáo bản quyền' : 'Copyright concern'}</option>
+                <option value="problem">{locale === 'vi' ? 'Lỗi đề bài / liên kết' : 'Problem / link error'}</option>
+                <option value="test">{locale === 'vi' ? 'Lỗi test / chấm bài' : 'Test case / judge issue'}</option>
+                <option value="lesson">{locale === 'vi' ? 'Lỗi bài học' : 'Lesson content issue'}</option>
+                <option value="copyright">{locale === 'vi' ? 'Vấn đề bản quyền' : 'Copyright concern'}</option>
                 <option value="other">{locale === 'vi' ? 'Góp ý khác' : 'Other'}</option>
               </select>
             </div>
 
             <div>
               <label htmlFor="report-target" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                {locale === 'vi' ? 'Mã bài học / slug bài tập' : 'Lesson code / problem slug'}
+                {locale === 'vi' ? 'Mã bài học hoặc mã bài tập' : 'Lesson code / problem slug'}
               </label>
               <input
                 id="report-target"
@@ -124,7 +141,7 @@ export function ReportModal({
 
             <div>
               <label htmlFor="report-msg" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                {locale === 'vi' ? 'Mô tả chi tiết' : 'Details'}
+                {locale === 'vi' ? 'Nội dung' : 'Details'}
               </label>
               <textarea
                 id="report-msg"
@@ -136,7 +153,7 @@ export function ReportModal({
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={
                   locale === 'vi'
-                    ? 'Mô tả lỗi bạn gặp hoặc đường dẫn cần gỡ...'
+                    ? 'Mô tả ngắn gọn lỗi bạn gặp phải...'
                     : 'Describe the issue or takedown request...'
                 }
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"

@@ -40,7 +40,7 @@ export function LoginPage() {
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             {locale === 'vi'
-              ? 'Lưu tiến độ 74 bài học, nộp bài lên máy chấm và tham gia kỳ thi.'
+              ? 'Lưu tiến độ học, nộp code chấm bài và tham gia kỳ thi.'
               : 'Track your 74-lesson progress, submit to the sandbox judge, and join contests.'}
           </p>
         </div>
@@ -99,7 +99,7 @@ export function LoginPage() {
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: locale === 'vi' ? 'Học viên' : 'Student', email: 'student@duckoj.vn', pw: 'student123' },
-              { label: locale === 'vi' ? 'Kiểm duyệt viên' : 'Reviewer', email: 'reviewer@duckoj.vn', pw: 'reviewer123' },
+              { label: locale === 'vi' ? 'Người duyệt bài' : 'Reviewer', email: 'reviewer@duckoj.vn', pw: 'reviewer123' },
               { label: locale === 'vi' ? 'Quản trị viên' : 'Admin', email: 'admin@duckoj.vn', pw: 'admin123' },
             ].map((acc) => (
               <button
@@ -169,7 +169,7 @@ export function RegisterPage() {
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             {locale === 'vi'
-              ? 'Miễn phí hoàn toàn cho toàn bộ 74 bài học và máy chấm trực tuyến.'
+              ? 'Miễn phí toàn bộ 74 bài học và chấm bài tự động.'
               : 'Free access to all 74 lessons and automated C++17 / Python 3 judging.'}
           </p>
         </div>

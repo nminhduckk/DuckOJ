@@ -47,11 +47,14 @@ export function DashboardPage() {
   // Profile edit
   const [nameInput, setNameInput] = useState('');
   const [nameMsg, setNameMsg] = useState('');
+  const [nameErr, setNameErr] = useState('');
   const [curPw, setCurPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [pwMsg, setPwMsg] = useState('');
   const [pwErr, setPwErr] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteErr, setDeleteErr] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -78,11 +81,11 @@ export function DashboardPage() {
           <Lock className="w-6 h-6" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-display">
-          {locale === 'vi' ? 'Đăng nhập để theo dõi tiến độ cá nhân' : 'Sign in to track your progress'}
+          {locale === 'vi' ? 'Đăng nhập để lưu tiến độ học' : 'Sign in to track your progress'}
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
           {locale === 'vi'
-            ? 'Lưu trạng thái 74 bài học, lịch sử chấm bài tự động, gợi ý bài tập tiếp theo và chuỗi luyện tập 30 ngày.'
+            ? 'Lưu lại các bài đã học, kết quả nộp bài và gợi ý bài tiếp theo phù hợp.'
             : 'Track 74 lessons, automated judge history, next-step problem recommendations, and your 30-day practice streak.'}
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
@@ -114,12 +117,13 @@ export function DashboardPage() {
   const handleSaveName = async (e: React.FormEvent) => {
     e.preventDefault();
     setNameMsg('');
+    setNameErr('');
     try {
       await apiFetch('/me', { method: 'PATCH', body: JSON.stringify({ name: nameInput }) });
       await refreshUser();
       setNameMsg(locale === 'vi' ? 'Đã cập nhật tên hiển thị.' : 'Display name updated.');
     } catch (err: any) {
-      setNameMsg(err?.message || (locale === 'vi' ? 'Không thể cập nhật tên hiển thị.' : 'Could not update display name.'));
+      setNameErr(err?.message || (locale === 'vi' ? 'Không thể cập nhật tên hiển thị.' : 'Could not update display name.'));
     }
   };
 
@@ -141,10 +145,19 @@ export function DashboardPage() {
   };
 
   const handleDeleteAccount = async () => {
-    await apiFetch('/me', { method: 'DELETE' });
-    setDeleteConfirmOpen(false);
-    await logout();
-    navigate('/');
+    if (deleting) return;
+    setDeleteErr('');
+    setDeleting(true);
+    try {
+      await apiFetch('/me', { method: 'DELETE' });
+      setDeleteConfirmOpen(false);
+      await logout();
+      navigate('/');
+    } catch (err: any) {
+      setDeleteErr(err?.message || (locale === 'vi' ? 'Không thể xóa tài khoản.' : 'Could not delete account.'));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -184,7 +197,7 @@ export function DashboardPage() {
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
           <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
-            <span>{locale === 'vi' ? 'Bài đã giải' : 'Solved Problems'}</span>
+            <span>{locale === 'vi' ? 'Đã làm đúng' : 'Solved Problems'}</span>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2 tabular-nums font-display">
             {stats?.solved_count ?? 0}
@@ -193,7 +206,7 @@ export function DashboardPage() {
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
           <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
             <Sparkles className="w-4 h-4" />
-            <span>{locale === 'vi' ? 'Thành thạo' : 'Mastered'}</span>
+            <span>{locale === 'vi' ? 'Đã vững' : 'Mastered'}</span>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2 tabular-nums font-display">
             {stats?.mastered_count ?? 0}
@@ -202,7 +215,7 @@ export function DashboardPage() {
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
             <BookCheck className="w-4 h-4" />
-            <span>{locale === 'vi' ? 'Bài học hoàn thành' : 'Lessons Completed'}</span>
+            <span>{locale === 'vi' ? 'Bài học đã xong' : 'Lessons Completed'}</span>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2 tabular-nums font-display">
             {stats?.lessons_done ?? 0}
@@ -212,7 +225,7 @@ export function DashboardPage() {
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
             <UserCheck className="w-4 h-4" />
-            <span>{locale === 'vi' ? 'Bài đang làm' : 'In Progress'}</span>
+            <span>{locale === 'vi' ? 'Đang làm' : 'In Progress'}</span>
           </div>
           <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2 tabular-nums font-display">
             {stats?.attempted_count ?? 0}
@@ -227,10 +240,10 @@ export function DashboardPage() {
           <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-                {locale === 'vi' ? 'Tần suất luyện tập 30 ngày qua' : '30-Day Activity'}
+                {locale === 'vi' ? 'Hoạt động 30 ngày qua' : '30-Day Activity'}
               </h2>
               <span className="text-xs text-slate-500 dark:text-slate-400">
-                {locale === 'vi' ? 'Số lần nộp / ngày' : 'Attempts / day'}
+                {locale === 'vi' ? 'Lần nộp / ngày' : 'Attempts / day'}
               </span>
             </div>
             {loading || !stats ? (
@@ -263,7 +276,7 @@ export function DashboardPage() {
           {/* Progress by Level */}
           <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4">
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-              {locale === 'vi' ? 'Tiến độ theo 7 cấp độ' : 'Progress by Level'}
+              {locale === 'vi' ? 'Tiến độ theo 7 cấp' : 'Progress by Level'}
             </h2>
             <div className="space-y-3">
               {(stats?.by_level || []).map((lv) => {
@@ -290,7 +303,7 @@ export function DashboardPage() {
           {/* Progress by Topic */}
           <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4">
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-              {locale === 'vi' ? 'Phân bổ theo chủ đề' : 'Topic Breakdown'}
+              {locale === 'vi' ? 'Tiến độ theo chủ đề' : 'Topic Breakdown'}
             </h2>
             <div className="grid sm:grid-cols-2 gap-3">
               {(stats?.by_topic || []).map((tp) => {
@@ -324,7 +337,7 @@ export function DashboardPage() {
         <div className="lg:col-span-5 space-y-6">
           <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-3">
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-              {locale === 'vi' ? 'Gợi ý bài tập tiếp theo' : 'Recommended Next'}
+              {locale === 'vi' ? 'Gợi ý nên làm tiếp' : 'Recommended Next'}
             </h2>
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {(stats?.recommended_problems || []).map((rec) => (
@@ -374,7 +387,7 @@ export function DashboardPage() {
             </div>
             {(stats?.recent_submissions || []).length === 0 ? (
               <p className="text-xs text-slate-500 dark:text-slate-400 py-4">
-                {locale === 'vi' ? 'Bạn chưa có bài nộp nào trên máy chấm.' : 'No judge submissions yet.'}
+                {locale === 'vi' ? 'Bạn chưa nộp bài nào.' : 'No judge submissions yet.'}
               </p>
             ) : (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -422,6 +435,7 @@ export function DashboardPage() {
               className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm text-slate-900 dark:text-white"
             />
             {nameMsg && <p className="text-xs text-emerald-700 dark:text-emerald-400">{nameMsg}</p>}
+            {nameErr && <p className="text-xs text-rose-600 dark:text-rose-400">{nameErr}</p>}
             <button
               type="submit"
               className="px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-950 text-xs font-semibold hover:opacity-90"
@@ -468,7 +482,7 @@ export function DashboardPage() {
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {locale === 'vi'
-                ? 'Hành động này sẽ xóa vĩnh viễn toàn bộ tiến độ, bài nộp và phiên đăng nhập của bạn.'
+                ? 'Xóa toàn bộ tài khoản, tiến độ học và lịch sử nộp bài.'
                 : 'Permanently delete your account, progress, and submission records.'}
             </p>
             <button
@@ -494,20 +508,26 @@ export function DashboardPage() {
                 ? 'Toàn bộ lịch sử học tập và bài nộp sẽ bị xóa vĩnh viễn và không thể khôi phục.'
                 : 'All learning progress and submission history will be permanently removed.'}
             </p>
+            {deleteErr && <p className="text-xs text-rose-600 dark:text-rose-400">{deleteErr}</p>}
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setDeleteConfirmOpen(false)}
-                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-medium"
+                disabled={deleting}
+                onClick={() => {
+                  setDeleteErr('');
+                  setDeleteConfirmOpen(false);
+                }}
+                className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-medium disabled:opacity-50"
               >
                 {locale === 'vi' ? 'Hủy' : 'Cancel'}
               </button>
               <button
                 type="button"
+                disabled={deleting}
                 onClick={handleDeleteAccount}
-                className="px-4 py-2 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700"
+                className="px-4 py-2 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 disabled:opacity-50"
               >
-                {locale === 'vi' ? 'Xóa vĩnh viễn' : 'Delete Permanently'}
+                {deleting ? (locale === 'vi' ? 'Đang xóa...' : 'Deleting...') : locale === 'vi' ? 'Xóa vĩnh viễn' : 'Delete Permanently'}
               </button>
             </div>
           </div>

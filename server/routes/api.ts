@@ -730,16 +730,21 @@ export function createApiRouter(db: DatabaseSync) {
 
   // ================= AUTH =================
 
-  const setRefreshCookie = (res: Response, rawToken: string) => {
+  const isHttpsReq = (req: Request) =>
+    req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+
+  const setRefreshCookie = (req: Request, res: Response, rawToken: string) => {
     const maxAge = 30 * 24 * 60 * 60;
+    const suffix = isHttpsReq(req) ? 'SameSite=None; Secure' : 'SameSite=Lax';
     res.setHeader(
       'Set-Cookie',
-      `duck_refresh=${encodeURIComponent(rawToken)}; HttpOnly; SameSite=Lax; Path=/api/v1/auth; Max-Age=${maxAge}`
+      `duck_refresh=${encodeURIComponent(rawToken)}; HttpOnly; ${suffix}; Path=/api/v1/auth; Max-Age=${maxAge}`
     );
   };
 
-  const clearRefreshCookie = (res: Response) => {
-    res.setHeader('Set-Cookie', 'duck_refresh=; HttpOnly; SameSite=Lax; Path=/api/v1/auth; Max-Age=0');
+  const clearRefreshCookie = (req: Request, res: Response) => {
+    const suffix = isHttpsReq(req) ? 'SameSite=None; Secure' : 'SameSite=Lax';
+    res.setHeader('Set-Cookie', `duck_refresh=; HttpOnly; ${suffix}; Path=/api/v1/auth; Max-Age=0`);
   };
 
   router.post('/auth/register', (req, res) => {
@@ -797,7 +802,7 @@ export function createApiRouter(db: DatabaseSync) {
       familyId,
       expIso
     );
-    setRefreshCookie(res, rt.raw);
+    setRefreshCookie(req, res, rt.raw);
 
     res.status(201).json({
       access_token: accessToken,
@@ -839,7 +844,7 @@ export function createApiRouter(db: DatabaseSync) {
       familyId,
       expIso
     );
-    setRefreshCookie(res, rt.raw);
+    setRefreshCookie(req, res, rt.raw);
 
     res.json({
       access_token: accessToken,
@@ -873,8 +878,8 @@ export function createApiRouter(db: DatabaseSync) {
     // §9.1: Reuse detection -> revoke entire family!
     if (rtRow.revoked_at) {
       db.prepare("UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE family_id = ?").run(rtRow.family_id);
-      clearRefreshCookie(res);
-      errResp(res, 401, 'unauthorized', 'Phát hiện sử dụng lại phiên cũ; phiên đăng nhập đã bị thu hồi.');
+      clearRefreshCookie(req, res);
+      errResp(res, 401, 'unauthorized', 'Phát hiện sử dụng lại phiên cũ; vui lòng đăng nhập lại.');
       return;
     }
 
@@ -901,7 +906,7 @@ export function createApiRouter(db: DatabaseSync) {
       rtRow.family_id,
       expIso
     );
-    setRefreshCookie(res, nextRt.raw);
+    setRefreshCookie(req, res, nextRt.raw);
 
     const user = {
       id: Number(userRow.id),
@@ -926,7 +931,7 @@ export function createApiRouter(db: DatabaseSync) {
         sha256Hex(cookies.duck_refresh)
       );
     }
-    clearRefreshCookie(res);
+    clearRefreshCookie(req, res);
     res.json({ ok: true });
   });
 
@@ -963,13 +968,13 @@ export function createApiRouter(db: DatabaseSync) {
       req.user!.id
     );
     db.prepare("UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE user_id = ?").run(req.user!.id);
-    clearRefreshCookie(res);
+    clearRefreshCookie(req, res);
     res.json({ ok: true });
   });
 
   router.delete('/me', requireAuth(db), (req: AuthedRequest, res) => {
     db.prepare('DELETE FROM users WHERE id = ?').run(req.user!.id);
-    clearRefreshCookie(res);
+    clearRefreshCookie(req, res);
     res.json({ ok: true });
   });
 
@@ -1111,7 +1116,7 @@ export function createApiRouter(db: DatabaseSync) {
       return;
     }
     if (prob.kind !== 'external') {
-      errResp(res, 422, 'validation_error', 'Chỉ bài tập chấm trực tiếp mới cập nhật trạng thái thông qua máy chấm.');
+      errResp(res, 422, 'validation_error', 'Bài tập chấm trên web tự cập nhật trạng thái theo kết quả chấm.');
       return;
     }
     const { status, notes } = req.body || {};
@@ -1158,7 +1163,7 @@ export function createApiRouter(db: DatabaseSync) {
       return;
     }
     if (prob.kind !== 'external') {
-      errResp(res, 422, 'validation_error', 'Chỉ áp dụng cho bài luyện tập từ nguồn ngoài.');
+      errResp(res, 422, 'validation_error', 'Chỉ áp dụng cho bài tập nguồn ngoài.');
       return;
     }
     const nowIso = new Date().toISOString();
@@ -1328,7 +1333,7 @@ export function createApiRouter(db: DatabaseSync) {
       return;
     }
     if (prob.kind !== 'native') {
-      errResp(res, 422, 'validation_error', 'Chỉ bài tập chấm trực tiếp mới hỗ trợ nộp bài trên máy chấm DuckOJ.');
+      errResp(res, 422, 'validation_error', 'Bài này là bài nguồn ngoài, không nộp code trực tiếp trên DuckOJ.');
       return;
     }
 
@@ -1453,6 +1458,10 @@ export function createApiRouter(db: DatabaseSync) {
 
   router.get('/submissions/:id/events', requireAuth(db), (req: AuthedRequest, res) => {
     const subId = Number(req.params.id);
+    if (!Number.isInteger(subId) || subId <= 0) {
+      errResp(res, 404, 'not_found', 'Không tìm thấy bài nộp.');
+      return;
+    }
     const sub = db.prepare('SELECT id, user_id, status, verdict, score, max_time_ms, max_memory_kb, tests_passed, tests_total, failed_test, compile_log FROM submissions WHERE id = ?').get(subId) as any;
     if (!sub) {
       errResp(res, 404, 'not_found', 'Không tìm thấy bài nộp.');
@@ -1864,12 +1873,17 @@ export function createApiRouter(db: DatabaseSync) {
   });
 
   router.patch('/admin/reports/:id', requireRole(db, ['reviewer', 'admin']), (req: AuthedRequest, res) => {
+    const repId = Number(req.params.id);
+    if (!Number.isInteger(repId) || repId <= 0) {
+      errResp(res, 404, 'not_found', 'Không tìm thấy báo cáo.');
+      return;
+    }
     const { status, archive_target } = req.body || {};
     if (!['open', 'resolved', 'dismissed'].includes(status)) {
       errResp(res, 422, 'validation_error', 'Trạng thái báo cáo không hợp lệ.');
       return;
     }
-    const rep = db.prepare('SELECT * FROM reports WHERE id = ?').get(Number(req.params.id)) as any;
+    const rep = db.prepare('SELECT * FROM reports WHERE id = ?').get(repId) as any;
     if (!rep) {
       errResp(res, 404, 'not_found', 'Không tìm thấy báo cáo.');
       return;
@@ -1895,6 +1909,35 @@ export function createApiRouter(db: DatabaseSync) {
       return;
     }
     const { title, complexity, theory_md, common_mistakes_md } = req.body || {};
+    if (
+      title === undefined &&
+      complexity === undefined &&
+      theory_md === undefined &&
+      common_mistakes_md === undefined
+    ) {
+      errResp(res, 422, 'validation_error', 'Cần gửi ít nhất một trường nội dung để cập nhật.');
+      return;
+    }
+    if (title !== undefined && (typeof title !== 'string' || !title.trim() || title.trim().length > 200)) {
+      errResp(res, 422, 'validation_error', 'Tiêu đề bài học phải dài từ 1 đến 200 ký tự.');
+      return;
+    }
+    if (complexity !== undefined && (typeof complexity !== 'string' || !complexity.trim() || complexity.trim().length > 200)) {
+      errResp(res, 422, 'validation_error', 'Độ phức tạp phải dài từ 1 đến 200 ký tự.');
+      return;
+    }
+    if (theory_md !== undefined && (typeof theory_md !== 'string' || theory_md.length > 200000)) {
+      errResp(res, 422, 'validation_error', 'Nội dung lý thuyết không hợp lệ.');
+      return;
+    }
+    if (common_mistakes_md !== undefined && (typeof common_mistakes_md !== 'string' || common_mistakes_md.length > 200000)) {
+      errResp(res, 422, 'validation_error', 'Nội dung lỗi thường gặp không hợp lệ.');
+      return;
+    }
+
+    const cleanTitle = title !== undefined ? title.trim() : null;
+    const cleanComplexity = complexity !== undefined ? complexity.trim() : null;
+
     db.prepare(
       `UPDATE lessons
        SET title = COALESCE(?, title),
@@ -1903,14 +1946,14 @@ export function createApiRouter(db: DatabaseSync) {
            common_mistakes_md = COALESCE(?, common_mistakes_md),
            updated_at = datetime('now')
        WHERE id = ?`
-    ).run(title ?? null, complexity ?? null, theory_md ?? null, common_mistakes_md ?? null, lesson.id);
+    ).run(cleanTitle, cleanComplexity, theory_md ?? null, common_mistakes_md ?? null, lesson.id);
 
     db.prepare('INSERT INTO audit_log (actor_id, action, entity, entity_id, diff) VALUES (?, ?, ?, ?, ?)').run(
       req.user!.id,
       'edit_lesson',
       'lesson',
       req.params.code,
-      JSON.stringify({ title, complexity })
+      JSON.stringify({ title: cleanTitle, complexity: cleanComplexity })
     );
     res.json({ ok: true });
   });
@@ -1918,7 +1961,7 @@ export function createApiRouter(db: DatabaseSync) {
   router.post('/admin/problems/:slug/test-sets', requireRole(db, ['admin']), (req: AuthedRequest, res) => {
     const prob = db.prepare('SELECT id, kind, level FROM problems WHERE slug = ?').get(req.params.slug) as any;
     if (!prob || prob.kind !== 'native') {
-      errResp(res, 404, 'not_found', 'Không tìm thấy bài tập chấm trực tiếp.');
+      errResp(res, 404, 'not_found', 'Không tìm thấy bài tập chấm trên web.');
       return;
     }
 
@@ -2000,6 +2043,10 @@ export function createApiRouter(db: DatabaseSync) {
 
   router.post('/admin/submissions/:id/rejudge', requireRole(db, ['admin']), (req: AuthedRequest, res) => {
     const subId = Number(req.params.id);
+    if (!Number.isInteger(subId) || subId <= 0) {
+      errResp(res, 404, 'not_found', 'Không tìm thấy bài nộp.');
+      return;
+    }
     const upd = db
       .prepare(
         `UPDATE submissions

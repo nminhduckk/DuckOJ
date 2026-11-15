@@ -137,14 +137,14 @@ export function RoadmapPage() {
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
           <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
-            {locale === 'vi' ? 'Sơ đồ kỹ năng 74 bài học' : '74-Lesson Directed Skill Roadmap'}
+            {locale === 'vi' ? 'Sơ đồ 74 bài học' : '74-Lesson Directed Skill Roadmap'}
           </p>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-display mt-1">
-            {locale === 'vi' ? 'Lộ trình học lập trình thi đấu' : 'Competitive Programming Roadmap'}
+            {locale === 'vi' ? 'Lộ trình học' : 'Competitive Programming Roadmap'}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1.5 tabular-nums">
             {locale === 'vi'
-              ? `Đã hoàn thành ${doneCount} / ${nodes.length || 74} bài học. Di chuột hoặc chạm vào một bài để xem bài tiên quyết và bài mở khóa.`
+              ? `Đã xong ${doneCount} / ${nodes.length || 74} bài. Di chuột hoặc chọn một bài để xem cần học bài nào trước.`
               : `Completed ${doneCount} / ${nodes.length || 74} lessons. Hover or focus any node to highlight prerequisites and unlocked lessons.`}
           </p>
         </div>
@@ -172,7 +172,7 @@ export function RoadmapPage() {
           {(
             [
               { key: 'all', label: locale === 'vi' ? `Tất cả (${nodes.length || 74})` : `All (${nodes.length || 74})` },
-              { key: 'done', label: locale === 'vi' ? 'Hoàn thành' : 'Done' },
+              { key: 'done', label: locale === 'vi' ? 'Đã xong' : 'Done' },
               { key: 'reading', label: locale === 'vi' ? 'Đang học' : 'Reading' },
               { key: 'not_started', label: locale === 'vi' ? 'Chưa học' : 'Not started' },
             ] as const
@@ -199,8 +199,8 @@ export function RoadmapPage() {
             </span>
             <span aria-hidden="true">·</span>
             <span>
-              {locale === 'vi' ? 'Tiên quyết:' : 'Prerequisites:'}{' '}
-              {(prereqMap.get(activeCode) || []).join(', ') || (locale === 'vi' ? 'Không có' : 'None')}
+              {locale === 'vi' ? 'Cần học trước:' : 'Prerequisites:'}{' '}
+              {(prereqMap.get(activeCode) || []).join(', ') || (locale === 'vi' ? 'Không cần' : 'None')}
             </span>
           </div>
         )}
@@ -266,7 +266,7 @@ export function RoadmapPage() {
                   </div>
                   <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                     {items.filter((i) => i.my_status === 'done').length} / {items.length}{' '}
-                    {locale === 'vi' ? 'hoàn thành' : 'completed'}
+                    {locale === 'vi' ? 'đã xong' : 'completed'}
                   </span>
                 </div>
 
@@ -317,7 +317,7 @@ export function RoadmapPage() {
                           <span>
                             {node.approved_problems} {locale === 'vi' ? 'bài tập' : 'problems'}
                             {node.native_problems > 0
-                              ? ` (${node.native_problems} ${locale === 'vi' ? 'chấm trực tiếp' : 'native'})`
+                              ? ` (${node.native_problems} ${locale === 'vi' ? 'chấm trên web' : 'native'})`
                               : ''}
                           </span>
                           {prereqs.length > 0 && (
@@ -328,7 +328,7 @@ export function RoadmapPage() {
                           {prereqs.length === 0 && (
                             <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
                               <CheckCircle2 className="w-3 h-3" />
-                              <span>{locale === 'vi' ? 'Mở đầu' : 'Start'}</span>
+                              <span>{locale === 'vi' ? 'Bắt đầu' : 'Start'}</span>
                             </span>
                           )}
                         </div>
